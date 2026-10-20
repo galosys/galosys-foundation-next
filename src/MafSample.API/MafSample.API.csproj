@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--<PackageReference Include="galosys.foundation.actuator.entityframeworkcore" Version="26.10.16.2" />-->
+		<!--<PackageReference Include="galosys.foundation.alibabacloud.sdk.dingtalk" Version="26.10.16.2" />-->
+		<!--<PackageReference Include="galosys.foundation.aspnetcore.dataprotection.freeredis" Version="26.10.16.2" />-->
+		<PackageReference Include="galosys.foundation.aspnetcore.dynamicapi" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.aspnetcore.securityheaders" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.compliance" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.core" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.dapper" Version="26.10.16.2" />
+		<!--<PackageReference Include="galosys.foundation.duckdb" Version="26.10.16.2" />-->
+		<PackageReference Include="galosys.foundation.entityframeworkcore" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.freeredis" Version="26.10.16.2" />
+		<!--<PackageReference Include="galosys.foundation.notification" Version="26.10.16.2" />-->
+		<!--<PackageReference Include="galosys.foundation.opentelemetry" Version="26.10.16.2" />-->
+		<PackageReference Include="galosys.foundation.rabbitmq.client" Version="26.10.16.2" />
+		<!--<PackageReference Include="galosys.foundation.rocketmq.client" Version="26.10.16.2" />-->
+		<PackageReference Include="galosys.foundation.serilog" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.swashbuckle" Version="26.10.16.2" />
+		<!--<PackageReference Include="galosys.foundation.agents.ai" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.agents.ai.hosting" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.agents.ai.hosting.aspnetcore" Version="26.10.16.2" />-->
+		<!--<PackageReference Include="galosys.foundation.agents.ai.milvus" Version="26.10.16.2" />-->
+		<!--<PackageReference Include="galosys.foundation.agents.ai.entityframeworkcore" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.agents.ai.hosting.entityframeworkcore" Version="26.10.16.2" />
+		<PackageReference Include="galosys.foundation.agents.ai.redis" Version="26.10.16.2" />-->
+	</ItemGroup>
+
+</Project>

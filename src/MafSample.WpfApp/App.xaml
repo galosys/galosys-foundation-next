@@ -1,0 +1,19 @@
+﻿<Application x:Class="MafSample.WpfApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MafSample.WpfApp">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf;component/System/Windows/Foundation/Styles/Schemes/Light.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf;component/System/Windows/Foundation/Styles/Tokens/Brushes.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf;component/System/Windows/Foundation/Styles/Tokens/Sizes.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf;component/System/Windows/Foundation/Styles/Tokens/Typography.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf;component/System/Windows/Foundation/Styles/FoundationTheme.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf;component/System/Windows/Foundation/Styles/Lucide.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf.Controls;component/Themes/Controls.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Galosys.Foundation.Wpf.Pro;component/Themes/Pro.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
