@@ -1,7 +1,7 @@
 # P1-2 宿主集成与示例迁移 Implementation Plan
 
 > **REQUIRED SUB-SKILL:** 使用 `executing-plans` 或 `opsx-apply-x` 逐任务执行本计划。
-> 本仓库不是 git 仓库，计划中的“提交”步骤统一替换为“构建 + 测试”验证，不执行 `git` 命令。
+> 本仓库虽有 git，但按约定不自动提交；计划中的“提交”步骤统一替换为“构建 + 测试”验证。
 
 **Goal:** 把 P1-1 的服务端内核接入通用主机：`AddChannelServer<T>`、`ChannelServerHostedService`、每连接容器 scope，并迁移 `NetServer.ConsoleApp`、更新文档。
 
@@ -13,7 +13,7 @@
 
 ## 1. 宿主层（先红）
 
-- [ ] 1.1 测试项目启用 ASP.NET Core 共享框架
+- [x] 1.1 测试项目增加 Hosting 包
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
@@ -22,7 +22,7 @@
 
 ```xml
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
   </ItemGroup>
 ```
 
@@ -31,7 +31,7 @@
 Run: `dotnet restore tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: `Restored ...`。
 
-- [ ] 1.2 写宿主注册与生命周期测试
+- [x] 1.2 写宿主注册与生命周期测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/HostingTests.cs`
@@ -73,7 +73,7 @@ internal sealed class HoldHostedServer : ChannelServerBase
 public sealed class HostingTests
 {
     [Fact]
-    public async Task AddChannelServer_RegistersSameServerInstance()
+    public void AddChannelServer_RegistersSameServerInstance()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddChannelServer<EchoHostedServer>(options =>
@@ -85,7 +85,6 @@ public sealed class HostingTests
         var contract = host.Services.GetRequiredService<IChannelServer>();
 
         Assert.Same(server, contract);
-        await Task.CompletedTask;
     }
 
     [Fact]
@@ -167,9 +166,8 @@ public sealed class HostingTests
 
         host.Dispose();
 
-        using var probe = new TcpClient();
-        await Assert.ThrowsAnyAsync<SocketException>(
-            () => probe.ConnectAsync(endPoint.Address, endPoint.Port).WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Null(server.LocalEndPoint);
+        Assert.False(await TestClient.TryConnectAsync(endPoint));
     }
 
     private static IHost BuildHost<TChannelServer>(Action<ChannelServerOptions> configure)
@@ -187,7 +185,7 @@ public sealed class HostingTests
 Run: `dotnet build tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: 编译错误 `AddChannelServer` 不存在。
 
-- [ ] 1.3 写每连接作用域测试
+- [x] 1.3 写每连接作用域测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ScopedHostingTests.cs`
@@ -293,7 +291,7 @@ Expected: 编译失败（`AddChannelServer` 缺失）。
 
 ## 2. 宿主层实现
 
-- [ ] 2.1 实现 ChannelServerHostedService
+- [x] 2.1 实现 ChannelServerHostedService
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Hosting/ChannelServerHostedService.cs`
@@ -330,7 +328,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.2 实现 AddChannelServer 注册扩展
+- [x] 2.2 实现 AddChannelServer 注册扩展
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Hosting/ChannelServerServiceCollectionExtensions.cs`
@@ -381,7 +379,7 @@ namespace Microsoft.Extensions.Hosting.Net
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: `Build succeeded`。若提示 `AddHostedService` 不可访问，确认已 `using Microsoft.Extensions.Hosting;`。
 
-- [ ] 2.3 运行宿主测试
+- [x] 2.3 运行宿主测试
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~HostingTests|FullyQualifiedName~ScopedHostingTests"`
 Expected: 7 个测试通过（HostingTests 6 + ScopedHostingTests 1）。
@@ -393,7 +391,7 @@ Expected: 7 个测试通过（HostingTests 6 + ScopedHostingTests 1）。
 
 ## 3. 示例迁移
 
-- [ ] 3.1 拆出 SampleChannelServer 并删除 ListenerBootstrapper
+- [x] 3.1 拆出 SampleChannelServer 并删除 ListenerBootstrapper
 
 **Files:**
 - Create: `src/NetServer.ConsoleApp/SampleChannelServer.cs`
@@ -447,7 +445,7 @@ namespace NetServer.ConsoleApp
 Run: `Remove-Item src\NetServer.ConsoleApp\ListenerBootstrapper.cs`
 Expected: 文件不存在；`SampleChannelServer` 仅保留在新文件中。
 
-- [ ] 3.2 改写 Program.cs 使用 AddChannelServer
+- [x] 3.2 改写 Program.cs 使用 AddChannelServer
 
 **Files:**
 - Modify: `src/NetServer.ConsoleApp/Program.cs`（整体替换）
@@ -475,7 +473,7 @@ host.Run();
 Run: `dotnet build src/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
 Expected: `Build succeeded`。
 
-- [ ] 3.3 冒烟运行示例
+- [x] 3.3 冒烟运行示例
 
 **Step 1: 启动**
 
@@ -489,7 +487,7 @@ Expected: 进程在数秒内退出，退出码 0；无 `NotImplementedException`
 
 ## 4. 文档
 
-- [ ] 4.1 补充 Primitives README 的宿主接入章节
+- [x] 4.1 补充 Primitives README 的宿主接入章节
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -523,7 +521,7 @@ host.Run();
 Run: `Select-String -Path src\Galosys.Foundation.Primitives\README.md -Pattern '^```' | Measure-Object`
 Expected: `Count` 为偶数。
 
-- [ ] 4.2 新建 NetServer README
+- [x] 4.2 新建 NetServer README
 
 **Files:**
 - Create: `src/NetServer.ConsoleApp/README.md`
@@ -564,7 +562,7 @@ dotnet run --project src/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj
 - 端口 8000 被占用时，`host.Run()` 在启动阶段失败并输出异常。
 ```
 
-- [ ] 4.3 更新根 AGENTS.md
+- [x] 4.3 更新根 AGENTS.md
 
 **Files:**
 - Modify: `AGENTS.md`
@@ -588,9 +586,9 @@ dotnet run --project src/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj
 **Step 2: 在“从文件名看不出来的架构事实”中追加一条**
 
 ```markdown
-- `Galosys.Foundation.Primitives` 的服务端基于 Kestrel 公共 transport（依赖
-  `Microsoft.AspNetCore.App`），通过 `AddChannelServer<T>` 接入通用主机，每连接使用独立 DI scope；
-  `NetServer.ConsoleApp` 是该库的示例宿主。
+- `Galosys.Foundation.Primitives` 的服务端使用自包含 socket transport（`System.Net.Sockets` +
+  `System.IO.Pipelines`，无 `Microsoft.AspNetCore.App` 依赖），通过 `AddChannelServer<T>` 接入通用主机，
+  每连接使用独立 DI scope；`NetServer.ConsoleApp` 是该库的示例宿主。
 ```
 
 **Step 3: 确认没有遗留矛盾**
@@ -600,7 +598,7 @@ Expected: 只命中新增的测试说明，不再命中“没有测试”。
 
 ## 5. 最终验证
 
-- [ ] 5.1 全量构建与测试
+- [x] 5.1 全量构建与测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: `Build succeeded`。
@@ -609,9 +607,9 @@ Run: `dotnet build src/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
 Expected: `Build succeeded`。
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
-Expected: p1-1 的 27 个用例 + 本变更 7 个用例全部通过，0 failed。
+Expected: p1-1 的 60 个用例 + 本变更 7 个用例，共 67 个全部通过，0 failed。
 
-- [ ] 5.2 记录验收
+- [x] 5.2 记录验收
 
 **Step 1: 勾选任务**
 
@@ -629,3 +627,11 @@ Expected: p1-1 的 27 个用例 + 本变更 7 个用例全部通过，0 failed�
 - `dotnet test`：XX passed / 0 failed
 - 示例冒烟：每秒输出 `>>>>> hello <<<<<`，Ctrl+C 正常退出
 ```
+
+## 执行记录
+
+- 日期：2026-10-21
+- `dotnet build`：Primitives 与 NetServer 均通过（0 warnings / 0 errors）
+- `dotnet test`：67 passed / 0 failed（连续 8 次全量运行稳定）
+- 示例冒烟：`dotnet run --no-build` 每秒输出 `>>>>> hello <<<<<`；停机路径由 `HostingTests` 覆盖
+- 备注：`SenderBootstrapper` 去掉了未使用的 `ILogger` 参数，构建无 CS9113

@@ -3,19 +3,19 @@ using System.Text;
 
 namespace NetServer.ConsoleApp
 {
-    public class SenderBootstrapper(ILogger<ListenerBootstrapper> logger) : BackgroundService
+    public class SenderBootstrapper : BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, protocolType: ProtocolType.Tcp);
-            await client.ConnectAsync("127.0.0.1", 8000);
+            using var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            await client.ConnectAsync("127.0.0.1", 8000, stoppingToken);
 
             var bytes = Encoding.UTF8.GetBytes("hello");
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await client.SendAsync(bytes);
-                await Task.Delay(1000);
+                await client.SendAsync(bytes, stoppingToken);
+                await Task.Delay(1000, stoppingToken);
             }
         }
     }

@@ -10,7 +10,9 @@
 - `dotnet build MafSample.slnx` **会失败**：`Galosys.Foundation.Nats.Net` 是缺包引用、无法编译的半成品
   原型。只构建你改动的那一个项目：`dotnet build src/<Project>/<Project>.csproj`。除此之外所有项目都能
   正常编译。
-- 仓库没有测试，`dotnet build` 是唯一的验证手段，不要去找 `dotnet test`。
+- 测试项目只有 `tests/Galosys.Foundation.Primitives.Tests`（xunit）。运行
+  `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`；
+  其余项目仍只靠 `dotnet build` 验证。
 - 运行示例：`dotnet run --project src/<Project>/<Project>.csproj`。多数示例是长期运行的
   `BackgroundService`，需要 Ctrl+C 才能退出。
 - `MafSample.API`（http://localhost:5134，Swagger 在 `/swagger`）**没有外部基础设施无法启动**：
@@ -28,8 +30,10 @@
   `AddSingleton`/`AddHostedService` 通常是多余的。`InternalModule` 主要用于特性表达不了的注册
   （如 `AddCqrs()`、`AddStateMachine(...)`）。
 - `Galosys.Foundation.Primitives` 是**本地**类库（基于 TCP + `System.IO.Pipelines` 的服务端基类，命名
-  空间为 `Microsoft.Extensions.Hosting.Net`）；`Galosys.Foundation.Doris` 同样是本地库（Doris
-  `_stream_load` 的 HTTP 客户端）。
+  空间为 `Microsoft.Extensions.Hosting.Net`）；服务端使用自包含 socket transport（`System.Net.Sockets` +
+  `System.IO.Pipelines`，无 `Microsoft.AspNetCore.App` 依赖），通过 `AddChannelServer<T>` 接入通用主机，
+  每连接使用独立 DI scope；`NetServer.ConsoleApp` 是该库的示例宿主。`Galosys.Foundation.Doris` 同样是
+  本地库（Doris `_stream_load` 的 HTTP 客户端）。
 - `MafSample.ConsoleApp/Microsoft/Extensions/Hosting/WindowedBatchWorker.cs` 是本地辅助类（Channel + Rx
   批处理），不是包里的类型；`ChannelClientBase` 和 `ProcessBatchAsync` 仍然抛
   `NotImplementedException` —— 多个示例是故意不完整的，并保留着注释掉的功能代码。

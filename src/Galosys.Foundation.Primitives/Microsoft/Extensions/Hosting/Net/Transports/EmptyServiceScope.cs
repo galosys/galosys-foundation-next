@@ -27,6 +27,7 @@ namespace Microsoft.Extensions.Hosting.Net
         {
         }
 
-        public object? GetService(Type serviceType) => null;
+        public object? GetService(Type serviceType)
+            => serviceType == typeof(IServiceProvider) ? this : null;
     }
 }

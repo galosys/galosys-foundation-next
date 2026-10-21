@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
@@ -122,6 +123,41 @@ internal static class TestClient
         }
     }
 
+    public static async Task AssertConnectFailsAsync(IPEndPoint endPoint)
+    {
+        await Assert.ThrowsAnyAsync<SocketException>(async () =>
+        {
+            using var probe = new TcpClient();
+            await probe.ConnectAsync(endPoint.Address, endPoint.Port).WaitAsync(TestWaits.DefaultTimeout);
+        });
+    }
+
+    public static async Task WaitUntilAsync(Func<Task<bool>> condition, string message)
+    {
+        var deadline = DateTime.UtcNow + TestWaits.DefaultTimeout;
+        while (!await condition())
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException(message);
+
+            await Task.Delay(10);
+        }
+    }
+
+    public static async Task<bool> TryConnectAsync(IPEndPoint endPoint)
+    {
+        try
+        {
+            using var probe = new TcpClient();
+            await probe.ConnectAsync(endPoint.Address, endPoint.Port).WaitAsync(TimeSpan.FromSeconds(1));
+            return true;
+        }
+        catch (Exception ex) when (ex is SocketException or TimeoutException)
+        {
+            return false;
+        }
+    }
+
     public static async Task WaitUntilListeningAsync(ChannelServerBase server)
     {
         var deadline = DateTime.UtcNow + TestWaits.DefaultTimeout;
@@ -133,6 +169,19 @@ internal static class TestClient
             await Task.Delay(10);
         }
     }
+}
+
+internal sealed class PassThroughDuplexPipe : IDuplexPipe
+{
+    public PassThroughDuplexPipe(IDuplexPipe inner)
+    {
+        Input = inner.Input;
+        Output = inner.Output;
+    }
+
+    public PipeReader Input { get; }
+
+    public PipeWriter Output { get; }
 }
 
 internal static class TestHandlers
@@ -167,6 +216,22 @@ internal static class TestHandlers
     }
 }
 
+internal sealed class ThrowingOnceScopeFactory : IServiceScopeFactory
+{
+    private int _calls;
+
+    public int CreatedCount;
+
+    public IServiceScope CreateScope()
+    {
+        if (Interlocked.Increment(ref _calls) == 1)
+            throw new InvalidOperationException("scope-boom");
+
+        Interlocked.Increment(ref CreatedCount);
+        return EmptyServiceScope.Instance;
+    }
+}
+
 internal sealed class TrackingScopeFactory : IServiceScopeFactory
 {
     private readonly ConcurrentQueue<string> _events = new();
@@ -175,7 +240,13 @@ internal sealed class TrackingScopeFactory : IServiceScopeFactory
 
     public TaskCompletionSource Disposed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    public Func<bool>? DisposeProbe { get; set; }
+
+    public bool? ProbeResult { get; private set; }
+
     public IReadOnlyCollection<string> Events => _events;
+
+    public int DisposedCount => _events.Count(e => e == "scope-disposed");
 
     public IServiceScope CreateScope()
     {
@@ -187,6 +258,7 @@ internal sealed class TrackingScopeFactory : IServiceScopeFactory
 
     private void NotifyDisposed()
     {
+        ProbeResult = DisposeProbe?.Invoke();
         _events.Enqueue("scope-disposed");
         Disposed.TrySetResult();
     }
@@ -209,7 +281,8 @@ internal sealed class TrackingScopeFactory : IServiceScopeFactory
 
         private sealed class EmptyProvider : IServiceProvider
         {
-            public object? GetService(Type serviceType) => null;
+            public object? GetService(Type serviceType)
+                => serviceType == typeof(IServiceProvider) ? this : null;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyModel;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyModel;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Messaging;
 using Microsoft.Extensions.Options;
 using NATS.Client.Core;
@@ -77,7 +79,7 @@ namespace System
 
                         try
                         {
-                            WorkerPool.CreateTaskPool().Start(async ct =>
+                            ConcurrentRunner.CreateTaskRunner(1).Start(async ct =>
                             {
                                 await foreach (var msg in template.SubscribeAsync<string>("sample.greet", queueGroup: "nats-sample-console-app", cancellationToken: cts.Token))
                                 {
