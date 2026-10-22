@@ -94,7 +94,7 @@ dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csp
 dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj
 ```
 
-`MafSample.slnx` 因包含无法还原依赖的 `Galosys.Foundation.Nats.Net`，不参与本项目验证。
+`Galosys.Foundation.Next.slnx` 因包含无法编译的 `Galosys.Foundation.Nats.Net`，不参与本项目验证。
 
 ## 阶段
 
