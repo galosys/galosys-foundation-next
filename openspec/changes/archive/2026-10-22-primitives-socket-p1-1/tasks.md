@@ -138,4 +138,4 @@
 ## 8. 后续
 
 `primitives-socket-p1-2`（DI、HostedService、示例迁移与文档）已完成（2026-10-21）：见
-`../primitives-socket-p1-2/tasks.md`；全量测试 67/67 通过，Primitives 与 NetServer 构建均无警告。
+`../2026-10-22-primitives-socket-p1-2/tasks.md`；全量测试 67/67 通过，Primitives 与 NetServer 构建均无警告。

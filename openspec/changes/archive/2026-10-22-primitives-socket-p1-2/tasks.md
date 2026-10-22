@@ -614,7 +614,7 @@ Expected: p1-1 的 60 个用例 + 本变更 7 个用例，共 67 个全部通过
 
 **Step 1: 勾选任务**
 
-在 `openspec/changes/primitives-socket-p1-2/tasks.md` 勾选所有完成项。
+在本文件勾选所有完成项。
 
 **Step 2: 写执行记录**
 
