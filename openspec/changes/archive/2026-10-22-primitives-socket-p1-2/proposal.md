@@ -24,7 +24,7 @@
 ## Impact
 
 - 代码：`src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Hosting/**`（新增）、`src/NetServer.ConsoleApp/Program.cs`、`ListenerBootstrapper.cs`（拆分/删除）、新增 `SampleChannelServer.cs`、`src/NetServer.ConsoleApp/README.md`、`AGENTS.md`。
-- 依赖：Primitives 需要 `Microsoft.Extensions.Hosting.Abstractions` 与 `Microsoft.Extensions.DependencyInjection.Abstractions`（由 `Microsoft.AspNetCore.App` 共享框架提供，无需新增包）。
-- 公共 API：新增 `AddChannelServer<T>` 与 `ChannelServerHostedService`；`SampleChannelServer` 构造函数签名变化（示例内部，不是框架 API）。
+- 依赖：Primitives 增加 `Microsoft.Extensions.Hosting.Abstractions`（10.0.12），复用已有的 `Microsoft.Extensions.DependencyInjection.Abstractions` / `Microsoft.Extensions.Logging.Abstractions`（10.0.13）；不使用 `Microsoft.AspNetCore.App` 共享框架。
+- 公共 API：新增 `AddChannelServer<T>`；`ChannelServerHostedService<T>` 为内部实现。`SampleChannelServer` 构造函数签名变化（示例内部，不是框架 API）。
 - 行为：`NetServer.ConsoleApp` 由 hosted service 托管，Ctrl+C 时优雅停机；端口占用在宿主启动阶段失败。
 - 验证：`dotnet build src/Galosys.Foundation.Primitives/...`、`dotnet build src/NetServer.ConsoleApp/...`、`dotnet test tests/Galosys.Foundation.Primitives.Tests/...`；`MafSample.slnx` 因含不可编译的 `Nats.Net` 不参与验证。

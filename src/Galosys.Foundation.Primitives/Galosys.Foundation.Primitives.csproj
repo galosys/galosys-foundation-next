@@ -8,11 +8,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="microsoft.extensions.logging.abstractions" Version="10.0.13" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="microsoft.extensions.dependencyinjection.abstractions" Version="10.0.13" />
+		<PackageReference Include="microsoft.extensions.hosting.abstractions" Version="10.0.12" />
+		<PackageReference Include="microsoft.extensions.logging.abstractions" Version="10.0.13" />
 	</ItemGroup>
 
 	<ItemGroup>

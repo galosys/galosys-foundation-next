@@ -8,11 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="galosys.foundation.castle.core" Version="26.10.16.2" />
-    <PackageReference Include="nats.net" Version="3.3.1" />
+    <Folder Include="Application\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Application\" />
+    <ProjectReference Include="..\Galosys.Foundation.Nats.Net\Galosys.Foundation.Nats.Net.csproj" />
   </ItemGroup>
 </Project>

@@ -15,6 +15,10 @@ namespace Microsoft.Extensions.Hosting.Net
         Task RunAsync(CancellationToken ct);
 
         /// <summary>停止接受连接、等待在途连接、超时后强制中止。</summary>
+        /// <remarks>
+        /// <paramref name="ct"/> 只取消对最终停机完成的等待，不取消停机流程本身；
+        /// 停机仍受 <see cref="ChannelServerOptions.ShutdownTimeout"/> 与内部排空预算约束。
+        /// </remarks>
         Task StopAsync(CancellationToken ct);
     }
 }

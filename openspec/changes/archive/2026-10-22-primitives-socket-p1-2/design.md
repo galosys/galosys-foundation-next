@@ -1,6 +1,6 @@
 ## Context
 
-`primitives-socket-p1-1` 交付了 `ChannelServerBase` + `KestrelChannelListener` + 管线 + Options + 每连接 scope 的内部注入点（`internal IServiceScopeFactory? ScopeFactory`、`internal ILoggerFactory? LoggerFactory`）。但宿主仍要手工完成：
+`primitives-socket-p1-1` 交付了 `ChannelServerBase` + `SocketChannelListener`/`SocketChannelConnection` + 管线 + Options + 每连接 scope 的内部注入点（`internal IServiceScopeFactory? ScopeFactory`、`internal ILoggerFactory? LoggerFactory`）。但宿主仍要手工完成：
 
 - 在 `BackgroundService` 中创建 scope 并调用 `RunAsync`（`NetServer.ConsoleApp/ListenerBootstrapper.cs` 当前就是这样，且一个 scope 覆盖服务器整个生命周期）。
 - 没有 `AddChannelServer`，服务器与容器生命周期脱节，停机依赖 hosted service 的取消令牌。
@@ -76,7 +76,7 @@ internal sealed class ChannelServerHostedService<TChannelServer> : IHostedServic
     }
 
     public Task StartAsync(CancellationToken ct) => _server.StartAsync(ct);
-    public Task StopAsync(CancellationToken ct) => _server.StopAsync(ct);
+    public Task StopAsync(CancellationToken ct) => _server.StopAsync(CancellationToken.None);
 }
 ```
 
@@ -122,14 +122,14 @@ host.Run();
 
 ### D5 测试策略
 
-测试项目在 p1-1 基础上增加 `<FrameworkReference Include="Microsoft.AspNetCore.App" />`，以便使用 `Host.CreateApplicationBuilder`、`IServiceCollection`。覆盖：
+测试项目在 p1-1 基础上增加 `Microsoft.Extensions.Hosting` 包（10.0.12），以便使用 `Host.CreateApplicationBuilder`、`IServiceCollection`；**不增加** `Microsoft.AspNetCore.App` FrameworkReference。覆盖：
 
-- 注册：同一实例、`IChannelServer` 指向同一对象、注册阶段不校验。
+- 注册：同一实例、`IChannelServer` 指向同一对象；Options 在解析（宿主启动）时校验。
 - 生命周期：`Host.StartAsync` 后立即可连接；`Host.StopAsync` 等待在途；端口占用与缺 EndPoint 使宿主启动失败。
 - 作用域：两个连接解析到不同 `ScopedProbe` 实例；连接结束后 `Dispose` 被调用。
-- 容器释放：`host.Dispose()` 后服务器停止，端口可被重新绑定。
+- 容器释放：`host.Dispose()` 后服务器停止，`LocalEndPoint` 清空且端口不再接受连接。
 
-端口统一用 `127.0.0.1:0`；等待使用 `TaskCompletionSource` + `WaitAsync`，不使用轮询式 `Task.Delay`（除 p1-1 已有的短等待辅助）。
+端口统一用 `127.0.0.1:0`；关键等待使用 `WaitAsync`，scope 释放的短等待使用 10ms 轮询辅助。
 
 ### D6 文档与 AGENTS
 
@@ -137,7 +137,7 @@ host.Run();
 - `src/NetServer.ConsoleApp/README.md`：说明示例行为、如何运行、Ctrl+C 停机。
 - 根 `AGENTS.md`：
   - 删除“仓库没有测试”的表述，新增 `tests/Galosys.Foundation.Primitives.Tests` 与 `dotnet test` 命令。
-  - 补充 Primitives 现在依赖 `Microsoft.AspNetCore.App`、NetServer 通过 `AddChannelServer` 托管。
+  - 补充 Primitives 使用自包含 socket transport（无 `Microsoft.AspNetCore.App` 依赖）、NetServer 通过 `AddChannelServer` 托管。
   - 保留 `MafSample.slnx` 不可构建、API 需外部基础设施等既有约束。
 
 ## Risks / Trade-offs

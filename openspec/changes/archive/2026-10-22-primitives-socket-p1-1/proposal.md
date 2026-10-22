@@ -6,7 +6,7 @@
 
 - **BREAKING** `IChannelServer.StartAsync` 语义改为“绑定成功即返回”，新增 `RunAsync` 承担“阻塞到停机”的旧用法；接口增加 `LocalEndPoint`，主路径改为 `IAsyncDisposable`。
 - **BREAKING** `ChannelContext` 从可变数据袋改为只读连接视图：新增 `ConnectionId`、`LocalEndPoint`、`RemoteEndPoint`、`Transport`、`ConnectionClosed`、`Services`、`Abort`；`Reader`/`Writer` 变为只读投影；构造函数收为 internal。
-- 保留 `ChannelServerBase` 继承入口与 `ChannelHandleAsync` 签名，现有子类不改代码；内部改用 Kestrel 公共 transport（`SocketTransportFactory` + `IConnectionListener`），删除自研 accept/收/发循环。
+- 保留 `ChannelServerBase` 继承入口与 `ChannelHandleAsync` 签名，现有子类不改代码；内部改用基于 `System.Net.Sockets` + `System.IO.Pipelines` 的自包含 transport，删除旧 accept/收/发循环，不引入 `Microsoft.AspNetCore.*` 依赖。
 - 新增管线契约 `ChannelHandlerDelegate`、`ChannelMiddleware`、`IChannelPipeline`，`ChannelServerBase.Configure` 成为组合缝。
 - 新增 `ChannelServerOptions`、`ChannelKeepAliveOptions`，覆盖 backlog、连接上限、NoDelay、缓冲、停机超时等；删除写死的 IPv4/backlog=128。
 - 每个连接创建独立 `IServiceScope`，连接释放时先触发 `ConnectionClosed` 再释放 scope。
@@ -28,7 +28,7 @@
 ## Impact
 
 - 代码：`src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/**`（重写 4 个类型、新增 Options/Pipeline/Transports）、`src/NetServer.ConsoleApp/ListenerBootstrapper.cs`、新增 `tests/Galosys.Foundation.Primitives.Tests/**`。
-- 依赖：`Galosys.Foundation.Primitives.csproj` 增加 `<FrameworkReference Include="Microsoft.AspNetCore.App" />`；测试项目增加 xunit / Microsoft.NET.Test.Sdk。
+- 依赖：`Galosys.Foundation.Primitives.csproj` 使用 .NET 10 内置的 `System.IO.Pipelines`，并显式引用 `Microsoft.Extensions.DependencyInjection.Abstractions`、`Microsoft.Extensions.Logging.Abstractions`；**不增加** `Microsoft.AspNetCore.App` FrameworkReference。测试项目增加 xunit / Microsoft.NET.Test.Sdk。
 - 公共 API：`IChannelServer`、`ChannelContext`、`ChannelServerBase` 有破坏性变更；`ChannelClientBase` 保持占位不动（P4 处理）。
 - 运行时：仅 `NetServer.ConsoleApp` 引用本库，影响面 1 个示例；`MafSample.API`、`MafSample.WpfApp` 不引用。
 - 验证：`dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`、`dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`；`MafSample.slnx` 因含不可编译的 `Nats.Net` 不参与验证。

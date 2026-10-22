@@ -1,10 +1,14 @@
+using Microsoft.Extensions.Hosting.Net;
 using NetServer.ConsoleApp;
 using System.Net;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<ListenerBootstrapper>();
+
+builder.Services.AddChannelServer<SampleChannelServer>(options =>
+{
+    options.EndPoint = new IPEndPoint(IPAddress.Any, 8000);
+});
 builder.Services.AddHostedService<SenderBootstrapper>();
-builder.Services.AddSingleton(sp => new SampleChannelServer(new IPEndPoint(IPAddress.Any, 8000), sp.GetRequiredService<ILogger<SampleChannelServer>>()));
 
 var host = builder.Build();
 host.Run();

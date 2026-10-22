@@ -15,13 +15,13 @@ namespace Microsoft.Extensions.Hosting.Net
         /// <summary>最大并发连接数，0 表示不限制。</summary>
         public int MaxConnections { get; set; }
 
-        /// <summary>是否禁用 Nagle 算法。</summary>
+        /// <summary>是否禁用 Nagle 算法（仅 TCP）。</summary>
         public bool NoDelay { get; set; } = true;
 
-        /// <summary>TCP keep-alive 配置。</summary>
+        /// <summary>TCP keep-alive 配置（仅 TCP）。</summary>
         public ChannelKeepAliveOptions? KeepAlive { get; set; }
 
-        /// <summary>SO_LINGER 配置。</summary>
+        /// <summary>SO_LINGER 配置，应用于已接受的连接。</summary>
         public LingerOption? LingerState { get; set; }
 
         /// <summary>是否启用 SO_REUSEADDR。</summary>
@@ -33,16 +33,16 @@ namespace Microsoft.Extensions.Hosting.Net
         /// <summary>优雅停机等待在途连接的最长时间。</summary>
         public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
-        /// <summary>读缓冲上限，null 表示由内核决定。</summary>
-        public long? MaxReadBufferSize { get; set; }
+        /// <summary>输入管道中未消费数据的上限，默认 1 MiB；超过后暂停接收，形成背压。</summary>
+        public long? MaxReadBufferSize { get; set; } = 1024 * 1024;
 
-        /// <summary>写缓冲上限，null 表示由内核决定。</summary>
-        public long? MaxWriteBufferSize { get; set; }
+        /// <summary>输出管道中未发送数据的上限，默认 64 KiB；超过后暂停写入，形成背压。</summary>
+        public long? MaxWriteBufferSize { get; set; } = 64 * 1024;
 
-        /// <summary>IO 队列数量，0 表示由内核决定。</summary>
-        public int IOQueueCount { get; set; }
-
-        /// <summary>自定义创建并绑定监听 socket 的工厂。</summary>
+        /// <summary>
+        /// 自定义创建并绑定监听 socket 的工厂。工厂负责套接字选项与绑定；
+        /// 框架随后调用 <c>Listen</c>，失败时负责释放返回的 socket。
+        /// </summary>
         public Func<EndPoint, Socket>? CreateBoundListenSocket { get; set; }
 
         internal void Validate()
@@ -59,14 +59,48 @@ namespace Microsoft.Extensions.Hosting.Net
             if (ShutdownTimeout <= TimeSpan.Zero)
                 throw new ArgumentException("ShutdownTimeout 必须大于 0。", nameof(ShutdownTimeout));
 
-            if (MaxReadBufferSize is <= 0)
+            if (ShutdownTimeout > TimeSpan.FromDays(1))
+                throw new ArgumentException("ShutdownTimeout 不能超过 1 天。", nameof(ShutdownTimeout));
+
+            if (MaxReadBufferSize is null or <= 0)
                 throw new ArgumentException("MaxReadBufferSize 必须大于 0。", nameof(MaxReadBufferSize));
 
-            if (MaxWriteBufferSize is <= 0)
+            if (MaxWriteBufferSize is null or <= 0)
                 throw new ArgumentException("MaxWriteBufferSize 必须大于 0。", nameof(MaxWriteBufferSize));
 
-            if (IOQueueCount < 0)
-                throw new ArgumentException("IOQueueCount 不能为负数。", nameof(IOQueueCount));
+            if (KeepAlive is { Enabled: true } keepAlive)
+            {
+                if (keepAlive.KeepAliveTime < TimeSpan.FromSeconds(1))
+                    throw new ArgumentException("KeepAliveTime 必须至少为 1 秒。", nameof(KeepAlive));
+
+                if (keepAlive.KeepAliveInterval < TimeSpan.FromSeconds(1))
+                    throw new ArgumentException("KeepAliveInterval 必须至少为 1 秒。", nameof(KeepAlive));
+
+                if (keepAlive.KeepAliveRetryCount < 0)
+                    throw new ArgumentException("KeepAliveRetryCount 不能为负数。", nameof(KeepAlive));
+            }
+        }
+
+        /// <summary>复制配置，避免启动后被外部修改影响运行中的服务器。</summary>
+        internal ChannelServerOptions Clone()
+        {
+            var clone = (ChannelServerOptions)MemberwiseClone();
+
+            if (KeepAlive is not null)
+            {
+                clone.KeepAlive = new ChannelKeepAliveOptions
+                {
+                    Enabled = KeepAlive.Enabled,
+                    KeepAliveTime = KeepAlive.KeepAliveTime,
+                    KeepAliveInterval = KeepAlive.KeepAliveInterval,
+                    KeepAliveRetryCount = KeepAlive.KeepAliveRetryCount,
+                };
+            }
+
+            if (LingerState is not null)
+                clone.LingerState = new LingerOption(LingerState.Enabled, LingerState.LingerTime);
+
+            return clone;
         }
     }
 }

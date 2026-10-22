@@ -61,7 +61,7 @@
 ### 2.2 实现层缺陷（由内核替换解决，此处仅登记）
 
 > 这些**不是本次要逐个修的代码**，而是"为什么不能继续在现有内核上叠功能"的证据。
-> 复用 Kestrel transport 后，绝大部分随旧代码一起删除。
+> 替换内核后，绝大部分随旧代码一起删除。
 
 | # | 位置 | 问题 |
 |---|---|---|
@@ -86,29 +86,37 @@
 
 | ID | 决策 | 理由 |
 |---|---|---|
-| D1 | **不自研 socket 内核，也不复制 Kestrel 源码**；复用 Kestrel 的 **public** transport | Kestrel 的 `SocketConnection` 是 `internal`，复制即接管维护；而接受连接/收发内核以 public API 形式可用（§3.1） |
+| D1 | **自研但最小化的 socket 内核**：`System.Net.Sockets` + `System.IO.Pipelines`，不依赖 ASP.NET Core/Kestrel | 核心库必须能被普通控制台宿主引用；Kestrel 会引入 `Microsoft.AspNetCore.App` 共享框架。传输边界保持 internal，未来可替换 |
 | D2 | **保留现有 4 个类型名与命名空间** `Microsoft.Extensions.Hosting.Net` | 使用方零迁移；且 ASP.NET Core/.NET 中不存在同名 public 类型，不会碰撞 |
-| D3 | **Kestrel 类型只出现在 private 字段/局部变量，绝不进入 public 签名** | 使用方全程 `using Microsoft.AspNetCore.*` 也不会二义；升级依赖不破坏 API |
+| D3 | **传输实现类型只出现在 internal 契约/实现中，绝不进入 public 签名** | 使用方不需要 `using Microsoft.AspNetCore.*`；Options 有意暴露 BCL 的 `EndPoint`/`Socket`/`LingerOption` 等配置类型；升级/替换传输不破坏 API |
 | D4 | **客户端采用"连接级"语义**：重连产生新 `ChannelContext`，断开期间不缓冲、不重放 | 不隐瞒"消息是否送达"；透明续传是另一个复杂度量级，另立抽象 |
 | D5 | **连接 ≠ 消息 ≠ 传输**，三层分离，消息层可选 | 现在 90% 的抽象问题来自三者混在一起 |
 
 ### 3.1 D1 的事实依据
 
-`Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets` 的 `PublicAPI.Shipped.txt`（release/10.0）确认：
+P1 曾评估复用 `Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets` 的 public transport。它确实能提供
+`SocketTransportFactory` / `ConnectionContext` / `IConnectionListener`，且与 HTTP 无关；但它要求
+`<FrameworkReference Include="Microsoft.AspNetCore.App" />`，会把 ASP.NET Core 共享框架带给所有引用方。
+本库的目标宿主包括普通控制台/后台服务，这个依赖不可接受。
 
-| public 类型 | 能力 |
+最终选择自包含实现，范围控制在一个监听器 + 一个连接实现：
+
+| 能力 | 实现 |
 |---|---|
-| `SocketTransportFactory(IOptions<SocketTransportOptions>, ILoggerFactory)` | `BindAsync(EndPoint, CancellationToken)` → `IConnectionListener`、`CanBind(EndPoint)` |
-| `SocketConnectionContextFactory` | `Create(Socket)` → `ConnectionContext` |
-| `SocketTransportOptions` | `Backlog`、`NoDelay`、`MaxRead/WriteBufferSize`、`IOQueueCount`、`CreateBoundListenSocket` |
-
-`ConnectionContext` / `IConnectionListener` / `ConnectionDelegate` 位于 `Microsoft.AspNetCore.Connections`，
-与 HTTP 无关。**结论：内核不用写。**
+| 创建/绑定/监听/接受 socket | `SocketChannelListener` |
+| 接收循环、输入 Pipe、背压 | `SocketChannelConnection.ReceiveLoopAsync` |
+| 部分发送、输出 Pipe、正常关闭排空 | `SocketChannelConnection.SendLoopAsync` |
+| 未读入站数据排空、避免 RST | `SocketChannelConnection.DrainInboundAsync` |
+| abort/重置、socket 选项、端点 | `SocketChannelConnection` + `SocketChannelListener` |
 
 > 曾被考虑并否决的方案：
-> - 自研 `SocketConnection` 内核（~3000 行，重复 Kestrel 已踩过的坑）。
-> - 直接改用 ASP.NET Core 的 `IConnectionListener` 作为公共契约（会迫使使用方接受 Kestrel 命名与依赖）。
+> - Kestrel public transport（会引入 ASP.NET Core 共享框架）。
+> - 直接暴露 `IConnectionListener` 作为公共契约（迫使使用方接受 ASP.NET Core 命名与依赖）。
+> - 复制 Kestrel 完整内核（维护成本远超需求）。
 > - 改名对齐 Kestrel（与 D2 冲突，且无收益）。
+
+未来若确需 Kestrel 的 IO 队列/平台优化，可新增可选的 `Galosys.Foundation.Primitives.Kestrel` 适配包，
+实现同一组 internal 传输契约；公共 API 不需要变化。
 
 ---
 
@@ -124,28 +132,28 @@
 ├──────────────────────────────────────────────────────────────┤
 │ L2 连接         ChannelContext（身份 + 生命周期 + Transport）  │ 唯一连接视图
 ├──────────────────────────────────────────────────────────────┤
-│ L1 传输         Kestrel SocketTransportFactory / NamedPipe     │ internal，不出现在 public 签名
+│ L1 传输         SocketChannelListener / SocketChannelConnection  │ internal，不出现在 public 签名
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ### 4.1 内核职责边界
 
-L1 由以下实现承担，**我们不写**：
+L1 由以下实现承担：
 
 | 能力 | 提供方 |
 |---|---|
-| accept 循环、每连接收/发双循环 | Kestrel `SocketTransportFactory` |
-| 部分发送循环、`SocketError` 分类、`ObjectDisposedException` 处理 | Kestrel `SocketSender`/`SocketReceiver` |
-| 背压、`PipeOptions`、`MemoryPool`、`PipeScheduler` | Kestrel + `System.IO.Pipelines` |
-| abort/graceful shutdown、`ConnectionClosed` 恰好一次 | Kestrel `SocketConnection.Shutdown` |
-| 客户端 connect + 双循环 | `Pipelines.Sockets.Unofficial` 的 `SocketConnection.ConnectAsync` |
-| NamedPipe 服务端 | `NamedPipeServerStream` + `PipeReader/PipeWriter.Create`（自写，~100 行） |
+| accept 循环、每连接收/发双循环 | `SocketChannelListener` + `SocketChannelConnection` |
+| 部分发送循环、`SocketError` 分类、`ObjectDisposedException` 处理 | `SocketChannelConnection`（`NetworkStream` + `Pipe`） |
+| 背压、`PipeOptions`、`MemoryPool`、`PipeScheduler` | `System.IO.Pipelines` |
+| abort/graceful shutdown、`ConnectionClosed` 恰好一次 | `SocketChannelConnection` + `ChannelContext` 自建 CTS |
+| 客户端 connect + 双循环 | P4 实现；可复用同一套 internal 连接契约 |
+| NamedPipe 服务端 | P5 用 `NamedPipeServerStream` + `PipeReader/PipeWriter.Create` 实现 |
 
 ---
 
 ## 5. 抽象契约
 
-### 5.1 `ChannelContext`（保留类名，改为只读连接视图）
+### 5.1 `ChannelContext`（保留类名，连接视图）
 
 ```csharp
 public sealed class ChannelContext : IAsyncDisposable
@@ -161,18 +169,22 @@ public sealed class ChannelContext : IAsyncDisposable
     public CancellationToken ConnectionClosed { get; }  // 恰好触发一次
     public IServiceProvider Services { get; }           // 每连接 scope
     public IDictionary<object, object?> Items { get; }  // 保留：仅杂项状态，不放服务
+    public Exception? AbortReason { get; }              // 首个中止异常
 
+    public void UseTransport(IDuplexPipe transport);    // 仅中间件在 next 前调用
     public void Abort(Exception? reason = null);        // 与"优雅完成"分开
     public ValueTask DisposeAsync();                    // 幂等；内部 abort
 }
 ```
+
+公开属性没有 setter；`Items` 是连接内可变字典，`UseTransport`/`Abort`/`DisposeAsync` 是显式连接操作。
 
 **不新增 `IChannelContext` 接口**：测试用一对内存 `Pipe` 即可，不值得为 mock 增加一层抽象。
 
 ### 5.2 `IChannelServer`（保留名字，职责收窄为监听器）
 
 ```csharp
-public interface IChannelServer : IAsyncDisposable
+public interface IChannelServer : IAsyncDisposable, IDisposable
 {
     EndPoint? LocalEndPoint { get; }          // 绑定成功后非 null
     Task StartAsync(CancellationToken ct);    // 返回 ⇔ 已可 accept
@@ -232,16 +244,16 @@ public sealed class ChannelServerOptions
     public LingerOption? LingerState { get; set; }
     public bool ReuseAddress { get; set; }
     public bool DualMode { get; set; }
-    public TimeSpan? IdleTimeout { get; set; }
     public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(10);
-    public long? MaxReadBufferSize { get; set; }
-    public long? MaxWriteBufferSize { get; set; }
-    public int IOQueueCount { get; set; } = 0;                   // 0 = 由内核决定
+    public long? MaxReadBufferSize { get; set; } = 1024 * 1024;
+    public long? MaxWriteBufferSize { get; set; } = 64 * 1024;
     public Func<EndPoint, Socket>? CreateBoundListenSocket { get; set; }
 }
 ```
 
-消息层独立配置：`MessageChannelOptions { MaxMessageSize, MaxBufferedMessages, IdleTimeout }`。
+`MaxReadBufferSize` / `MaxWriteBufferSize` 是输入/输出 Pipe 的暂停阈值，必须大于 0。
+`CreateBoundListenSocket` 由调用方创建并绑定 socket，框架随后调用 `Listen`。
+`IOQueueCount` 与 `IdleTimeout` 不再出现在 P1 Options 中：前者是 Kestrel 特有概念，后者没有消费它的中间件。
 
 ### 5.6 消息层（L3）
 
@@ -377,7 +389,7 @@ public sealed class ChannelClientOptions
 | INV-4 | `Abort`（立即中止）与"优雅完成"（flush + FIN）是两条路径，不合并 |
 | INV-5 | `ChannelContext` 所有属性只读；服务从 `Services` 取，不从 `Items` 取 |
 | INV-6 | `StartAsync` 返回 ⇔ 已能 accept（不是因为停机返回） |
-| INV-7 | Kestrel 类型不出现在任何 public 签名 |
+| INV-7 | 核心程序集不引用 `Microsoft.AspNetCore.*`，传输实现类型不出现在 public 签名 |
 | INV-8 | 客户端每个连接对应一个 `ChannelContext`；重连 = 新连接 + 新 `ConnectionId` |
 | INV-9 | 消息层超限必须 fail-fast，不得无限缓冲 |
 | INV-10 | 库代码一律 `ConfigureAwait(false)` |
@@ -389,7 +401,7 @@ public sealed class ChannelClientOptions
 | 候选名 | 冲突 | 决定 |
 |---|---|---|
 | `ChannelContext` / `IChannelServer` / `ChannelServerBase` / `ChannelClientBase` | 检索未发现 ASP.NET Core/.NET 同名 public 类型 | ✅ 保留 |
-| `ConnectionContext` / `IConnectionListener` / `ConnectionDelegate` | 与 Kestrel 全名相同 | ❌ 不定义、不暴露 |
+| `IChannelListener` / `IChannelConnection` | 与 ASP.NET Core transport 概念相近 | ⚠️ internal，不进入 public 签名 |
 | `IConnectionFactory` | `Microsoft.AspNetCore.Connections` 已有 | ❌ 用 `IChannelClientFactory` |
 | `ChannelOptions` | 与 `System.Threading.Channels.ChannelOptions` 冲突 | ❌ 用 `ChannelServerOptions` |
 | `IMessageChannel` | 可能与 Galosys Messaging 抽象冲突 | ❌ 用 `IChannelSession<T>` |
@@ -435,8 +447,12 @@ src/Galosys.Foundation.Primitives/
       ChannelTlsOptions.cs
       TlsMiddleware.cs
     Transports/            // internal
-      KestrelChannelListener.cs
-      NamedPipeChannelListener.cs
+      IChannelListener.cs
+      IChannelConnection.cs
+      SocketChannelListener.cs
+      SocketChannelConnection.cs
+      DuplexPipe.cs
+      NamedPipeChannelListener.cs   // P5
       InMemoryConnection.cs   // 测试用，InternalsVisibleTo
     Diagnostics/
       ChannelDiagnostics.cs   // ActivitySource + Meter + 日志事件 ID
@@ -446,12 +462,13 @@ src/Galosys.Foundation.Primitives/
 
 | 依赖 | 用途 | 说明 |
 |---|---|---|
-| `<FrameworkReference Include="Microsoft.AspNetCore.App" />` | Kestrel transport | 只加在本项目；当前仅 `NetServer.ConsoleApp` 引用本库 |
-| `Pipelines.Sockets.Unofficial`（MIT，2.2.16） | 客户端 `SocketConnection.ConnectAsync` | 通过 internal `IConnectionSource` 包裹，可替换 |
-| `Microsoft.Extensions.*` | Hosting/Options/Logging | 已有 |
+| `System.Net.Sockets` / `System.IO.Pipelines` | 监听、连接、收/发与背压 | .NET 10 基础库，无额外包 |
+| `Microsoft.Extensions.DependencyInjection.Abstractions` | `IServiceScopeFactory` / `IServiceScope` | 10.0.13 |
+| `Microsoft.Extensions.Logging.Abstractions` | `ILoggerFactory` / `ILogger` | 10.0.13 |
+| `Pipelines.Sockets.Unofficial`（MIT，2.2.16） | P4 客户端 `SocketConnection.ConnectAsync`（可选） | 通过 internal 契约包裹，可替换 |
 
-> 若将来出现非 ASP.NET Core 宿主，再把 `Transports/` 拆成独立包 `Primitives.Kestrel`。
-> **现在不拆**，避免过早分包。
+> 核心库**不引用** `Microsoft.AspNetCore.App`。若将来确有 Kestrel 需求，另加可选的
+> `Primitives.Kestrel` 适配包实现同一组 internal 契约，公共 API 不变；现在不拆包。
 
 ---
 
@@ -459,7 +476,7 @@ src/Galosys.Foundation.Primitives/
 
 | 阶段 | 内容 | 验收标准 |
 |---|---|---|
-| P1 基架 | Abstractions + Kestrel 适配 + 管线 + Options + 每连接 scope + 优雅停机 + `ChannelServerHostedService`；**删除**旧收/发循环 | `NetServer.ConsoleApp` 改用新 API 后行为等价；loopback 测试通过 |
+| P1 基架 | 自包含 socket transport + 管线 + Options + 每连接 scope + 优雅停机；**删除**旧收/发循环 | `NetServer.ConsoleApp` 改用新 API 后行为等价；60 个 loopback/单元测试通过；核心程序集无 ASP.NET 引用 |
 | P2 消息层 | `IMessageFramer<T>` + 三种内置 framer + `IChannelSession<T>` + `MaxMessageSize` | 半包/粘包/超限拒绝测试通过 |
 | P3 TLS | `ChannelTlsOptions` + `UseTls`（服务端/客户端） | 双向 TLS 握手、证书校验失败路径测试通过 |
 | P4 客户端 | `ChannelClientBase`/`ChannelClient` + 状态机 + `ChannelReconnectPolicy` + 心跳接入点 | 断线重连、退避、取消、终态测试通过（假时钟） |
@@ -488,7 +505,8 @@ P1 内即完成一次"旧代码删除"，避免两套内核长期并存。
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| 引入 `Microsoft.AspNetCore.App` 依赖 | 非 Web 宿主也被迫携带 ASP.NET Core 共享框架 | 只加在 `Primitives`；影响面 1 个项目；预留拆包方案 |
+| 自维护 socket 传输的边缘行为（部分发送、RST、背压、半关闭） | 数据丢失或连接挂起 | 发送循环完整写出；输入/输出 Pipe 背压；优雅关闭排空、半关闭、RST 测试锁定；internal 契约允许替换实现 |
+| 引入 `Microsoft.AspNetCore.App` 的原计划被撤销 | 核心库保持宿主无关，但需自行维护少量 socket 代码 | 依赖边界测试防回归；代码量控制在监听器 + 连接两个类 |
 | TLS 无真正半关闭 | 关闭语义含糊、可能丢尾部数据 | §6 INV-4 明确定义 `Abort` vs 优雅完成；TLS 下以 `SslStream` 关闭流程为准，写测试锁定 |
 | `Pipelines.Sockets.Unofficial` 自述 API "very preliminary" | 上游变更 | 固定版本，内部 `IConnectionSource` 隔离，可替换为自写客户端 |
 | `Microsoft.Extensions.Hosting.Net` 是微软保留前缀 | 未来同名类型冲突（CS0433） | 本次不改（D2）；记为后续可选迁移项 |
@@ -508,14 +526,14 @@ P1 内即完成一次"旧代码删除"，避免两套内核长期并存。
 | Q5 | 客户端首版是否支持多 EndPoint 故障转移 | 否，仅预留字段 | 重连先做单地址 |
 | Q6 | 客户端是否进本轮（P4） | 是 | 但排在服务端之后 |
 | Q7 | 旧 `Primitives` socket 类型是否保留 `[Obsolete]` 过渡 | 不保留，直接替换（仅 1 个消费方） | 如外部已有使用方则改为保留一版 |
-| Q8 | 是否现在拆 `Primitives.Kestrel` 独立包 | 否 | 等第二个宿主出现 |
+| Q8 | 是否现在提供可选的 Kestrel transport 适配包 | 否 | 核心已零 ASP.NET 依赖；确有 Kestrel IO 队列/平台优化需求时再加，公共 API 不变 |
 
 ---
 
 ## 13. 参考
 
 - [System.IO.Pipelines - .NET](https://learn.microsoft.com/en-us/dotnet/standard/io/pipelines)（背压、`AdvanceTo`、半包/粘包、取消）
-- Kestrel `SocketConnection`（`dotnet/aspnetcore`，`release/10.0`，`Transport.Sockets/src/Internal/`）
-- Kestrel `Transport.Sockets` `PublicAPI.Shipped.txt`（确认可复用的 public API）
-- [Pipelines.Sockets.Unofficial](https://github.com/mgravell/Pipelines.Sockets.Unofficial)（MIT，客户端 `SocketConnection`）
-- `Microsoft.AspNetCore.Connections` 命名空间（`ConnectionContext`/`IConnectionListener`/`IConnectionFactory`）
+- [System.Net.Sockets](https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets)（`Socket`、`NetworkStream`、keep-alive/linger 选项）
+- [SocketAsyncEventArgs 与取消](https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.acceptasync)（`AcceptAsync(CancellationToken)` 语义）
+- [Pipelines.Sockets.Unofficial](https://github.com/mgravell/Pipelines.Sockets.Unofficial)（MIT，P4 客户端可选）
+- [Kestrel Transport.Sockets](https://github.com/dotnet/aspnetcore/tree/main/src/Servers/Kestrel/Transport.Sockets)（仅作实现参考，不引入依赖）
