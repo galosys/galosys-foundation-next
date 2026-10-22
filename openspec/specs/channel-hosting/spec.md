@@ -81,7 +81,7 @@ The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须
 
 #### Scenario: 启动后打印 hello
 
-- **WHEN** 运行 `dotnet run --project src/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
+- **WHEN** 运行 `dotnet run --project samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
 - **THEN** 控制台每秒输出一条包含 `hello` 的日志
 - **AND** 监听端口为 8000
 

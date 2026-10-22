@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Hosting.Net
 {

@@ -1,6 +1,6 @@
 # Galosys.Foundation.Primitives
 
-服务端 socket 传输层的最小基架，命名空间 `Microsoft.Extensions.Hosting.Net`。
+服务端 socket 传输层的最小基架：核心类型位于 `Microsoft.Extensions.Hosting.Net`；`*Options` 位于 `Microsoft.Extensions.Options`，宿主注册扩展 `AddChannelServer` 位于 `Microsoft.Extensions.DependencyInjection`。
 
 ## 能力
 
@@ -65,6 +65,8 @@ builder.Services.AddChannelServer<MyServer>(options =>
 var host = builder.Build();
 host.Run();
 ```
+
+使用方通常已引用 `Microsoft.Extensions.DependencyInjection` 与 `Microsoft.Extensions.Options`，无需额外 using。
 
 - `MyServer` 的构造函数必须能解析 `ChannelServerOptions`，例如 `(ChannelServerOptions, ILogger<MyServer>)`。
 - 每连接从容器创建独立 `IServiceScope`，可在处理器中通过 `context.Services` 解析 Scoped 服务。

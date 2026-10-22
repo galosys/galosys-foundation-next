@@ -1,15 +1,15 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/AopSample.ConsoleApp/AopSample.ConsoleApp.csproj" Id="14ad0c7c-d903-4820-bb5d-abf52e96eb5b" />
-    <Project Path="src/DataIngestionSample.ConsoleApp/DataIngestionSample.ConsoleApp.csproj" Id="11be50f7-8be7-470e-9553-fe013b7a92b4" />
-    <Project Path="src/MafSample.Adapter/MafSample.Adapter.csproj" Id="f8dcffda-b587-4e83-a982-95141db79365" />
-    <Project Path="src/MafSample.API/MafSample.API.csproj" Id="39a5756d-e643-4a69-bce1-31822b218ad5" />
-    <Project Path="src/MafSample.ConsoleApp/MafSample.ConsoleApp.csproj" Id="447c17a1-bc05-4f5f-966e-6c3e83eb8f17" />
-    <Project Path="src/MafSample.WpfApp/MafSample.WpfApp.csproj" Id="421047a0-d728-4095-826e-d1bae07e9bfc" />
-    <Project Path="src/NatsSample.ConsoleApp/NatsSample.ConsoleApp.csproj" Id="459ae57f-f4e4-4596-9a9b-01a01108a981" />
-    <Project Path="src/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj" Id="e02e4150-edde-41da-b52a-4627455b8d24" />
+  <Folder Name="/samples/">
+    <Project Path="samples/AopSample.ConsoleApp/AopSample.ConsoleApp.csproj" Id="14ad0c7c-d903-4820-bb5d-abf52e96eb5b" />
+    <Project Path="samples/DataIngestionSample.ConsoleApp/DataIngestionSample.ConsoleApp.csproj" Id="11be50f7-8be7-470e-9553-fe013b7a92b4" />
+    <Project Path="samples/MafSample.Adapter/MafSample.Adapter.csproj" Id="f8dcffda-b587-4e83-a982-95141db79365" />
+    <Project Path="samples/MafSample.API/MafSample.API.csproj" Id="39a5756d-e643-4a69-bce1-31822b218ad5" />
+    <Project Path="samples/MafSample.ConsoleApp/MafSample.ConsoleApp.csproj" Id="447c17a1-bc05-4f5f-966e-6c3e83eb8f17" />
+    <Project Path="samples/MafSample.WpfApp/MafSample.WpfApp.csproj" Id="421047a0-d728-4095-826e-d1bae07e9bfc" />
+    <Project Path="samples/NatsSample.ConsoleApp/NatsSample.ConsoleApp.csproj" Id="459ae57f-f4e4-4596-9a9b-01a01108a981" />
+    <Project Path="samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj" Id="e02e4150-edde-41da-b52a-4627455b8d24" />
   </Folder>
-  <Folder Name="/src/Infras/">
+  <Folder Name="/src/">
     <Project Path="src/Galosys.Foundation.Doris/Galosys.Foundation.Doris.csproj" Id="f079b074-cc52-469b-bb37-b68ea622fce1" />
     <Project Path="src/Galosys.Foundation.Nats.Net/Galosys.Foundation.Nats.Net.csproj" Id="55fed2f9-5bc7-4972-9597-b28d201c5f31" />
     <Project Path="src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj" Id="8341af14-392f-441c-bf48-bfad24c7b15e" />

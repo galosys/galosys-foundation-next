@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting.Net;
+using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Primitives.Tests;
 
