@@ -118,7 +118,7 @@
 
 ## 6. 消费方迁移与文档
 
-- [x] 6.1 NetServer 改用 `RunAsync`（完成）
+- [x] 6.1 NetServer 改用 `RunAsync`（完成；P1-2 进一步改为 `AddChannelServer` 宿主托管）
 - [x] 6.2 编写 Primitives README（完成）
 - [x] 6.3 最终验证（完成）
 
@@ -137,4 +137,5 @@
 
 ## 8. 后续
 
-`primitives-socket-p1-2`（DI、HostedService、示例迁移与文档）尚未开始；其计划已同步更新为自包含 transport、无 `FrameworkReference`，并预期 60 + 7 = 67 个测试。
+`primitives-socket-p1-2`（DI、HostedService、示例迁移与文档）已完成（2026-10-21）：见
+`../primitives-socket-p1-2/tasks.md`；全量测试 67/67 通过，Primitives 与 NetServer 构建均无警告。

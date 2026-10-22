@@ -64,6 +64,7 @@ public sealed class HostingTests
 
         Assert.Equal("ping", System.Text.Encoding.UTF8.GetString(echoed));
 
+        client.Dispose();
         await host.StopAsync();
     }
 

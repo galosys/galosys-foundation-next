@@ -105,6 +105,7 @@ public sealed class HostingTests
 
         Assert.Equal("ping", System.Text.Encoding.UTF8.GetString(echoed));
 
+        client.Dispose();
         await host.StopAsync();
     }
 
@@ -635,3 +636,4 @@ Expected: p1-1 的 60 个用例 + 本变更 7 个用例，共 67 个全部通过
 - `dotnet test`：67 passed / 0 failed（连续 8 次全量运行稳定）
 - 示例冒烟：`dotnet run --no-build` 每秒输出 `>>>>> hello <<<<<`；停机路径由 `HostingTests` 覆盖
 - 备注：`SenderBootstrapper` 去掉了未使用的 `ILogger` 参数，构建无 CS9113
+- 后续：回显用例在 `StopAsync` 前显式关闭客户端，避免等待默认 10s 停机超时；全量测试约 6s
