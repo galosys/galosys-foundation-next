@@ -5,6 +5,7 @@
     <Project Path="samples/MafSample.Adapter/MafSample.Adapter.csproj" Id="f8dcffda-b587-4e83-a982-95141db79365" />
     <Project Path="samples/MafSample.API/MafSample.API.csproj" Id="39a5756d-e643-4a69-bce1-31822b218ad5" />
     <Project Path="samples/MafSample.ConsoleApp/MafSample.ConsoleApp.csproj" Id="447c17a1-bc05-4f5f-966e-6c3e83eb8f17" />
+    <Project Path="samples/MafSample.WebApp.Ops/MafSample.WebApp.Ops.csproj" />
     <Project Path="samples/MafSample.WpfApp/MafSample.WpfApp.csproj" Id="421047a0-d728-4095-826e-d1bae07e9bfc" />
     <Project Path="samples/NatsSample.ConsoleApp/NatsSample.ConsoleApp.csproj" Id="459ae57f-f4e4-4596-9a9b-01a01108a981" />
     <Project Path="samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj" Id="e02e4150-edde-41da-b52a-4627455b8d24" />

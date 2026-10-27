@@ -1,0 +1,39 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Edge="Edge.Start"
+                       OnClick="ToggleDrawer" />
+        <MudText Typo="Typo.h5" Class="ml-3">我的系统</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.DarkMode"
+                       OnClick="ToggleDark" />
+    </MudAppBar>
+
+    @* <MudDrawer @bind-Open="_drawerOpen" Elevation="2" Variant="DrawerVariant.Responsive">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">首页</MudNavLink>
+            <MudNavLink Href="/users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">用户管理</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer> *@
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDark;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void ToggleDark() => _isDark = !_isDark;
+}
