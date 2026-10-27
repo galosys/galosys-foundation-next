@@ -3,69 +3,33 @@ using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Net;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Primitives.Tests;
 
-internal sealed class EchoHostedServer : ChannelServerBase
-{
-    public EchoHostedServer(ChannelServerOptions options)
-        : base(options)
-    {
-    }
-
-    protected override Task ChannelHandleAsync(ChannelContext context) => TestHandlers.EchoAsync(context);
-}
-
-internal sealed class HoldHostedServer : ChannelServerBase
-{
-    public static CancellationTokenSource Release { get; set; } = new();
-
-    public HoldHostedServer(ChannelServerOptions options)
-        : base(options)
-    {
-    }
-
-    protected override Task ChannelHandleAsync(ChannelContext context)
-        => TestHandlers.HoldAsync(context, Release.Token);
-}
-
 public sealed class HostingTests
 {
     [Fact]
-    public void AddChannelServer_RegistersSameServerInstance()
-    {
-        var builder = Host.CreateApplicationBuilder();
-        builder.Services.AddChannelServer<EchoHostedServer>(options =>
-            options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0));
-
-        using var host = builder.Build();
-
-        var server = host.Services.GetRequiredService<EchoHostedServer>();
-        var contract = host.Services.GetRequiredService<IChannelServer>();
-
-        Assert.Same(server, contract);
-    }
-
-    [Fact]
     public async Task Host_StartAsync_BindsServer_AndEchoes()
     {
-        using var host = BuildHost<EchoHostedServer>(options =>
+        using var host = BuildHost(TestHandlers.EchoAsync, options =>
             options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0));
 
         await host.StartAsync();
 
-        var server = host.Services.GetRequiredService<EchoHostedServer>();
+        var server = host.Services.GetRequiredService<ChannelServer>();
         Assert.NotNull(server.LocalEndPoint);
 
-        using var client = await TestClient.ConnectAsync((IPEndPoint)server.LocalEndPoint!);
-        var stream = client.GetStream();
-        await stream.WriteAsync("ping"u8.ToArray());
-        var echoed = await TestClient.ReadExactlyAsync(stream, 4);
+        using (var client = await TestClient.ConnectAsync((IPEndPoint)server.LocalEndPoint!))
+        {
+            var stream = client.GetStream();
+            await stream.WriteAsync("ping"u8.ToArray());
+            var echoed = await TestClient.ReadExactlyAsync(stream, 4);
 
-        Assert.Equal("ping", System.Text.Encoding.UTF8.GetString(echoed));
+            Assert.Equal("ping", System.Text.Encoding.UTF8.GetString(echoed));
+        }
 
-        client.Dispose();
         await host.StopAsync();
     }
 
@@ -76,7 +40,7 @@ public sealed class HostingTests
         blocker.Start();
         var port = ((IPEndPoint)blocker.LocalEndpoint).Port;
 
-        using var host = BuildHost<EchoHostedServer>(options =>
+        using var host = BuildHost(TestHandlers.EchoAsync, options =>
             options.EndPoint = new IPEndPoint(IPAddress.Loopback, port));
 
         await Assert.ThrowsAsync<SocketException>(() => host.StartAsync());
@@ -85,7 +49,7 @@ public sealed class HostingTests
     [Fact]
     public async Task Host_StartAsync_Throws_WhenEndPointMissing()
     {
-        using var host = BuildHost<EchoHostedServer>(_ => { });
+        using var host = BuildHost(TestHandlers.EchoAsync, _ => { });
 
         await Assert.ThrowsAsync<ArgumentException>(() => host.StartAsync());
     }
@@ -93,16 +57,18 @@ public sealed class HostingTests
     [Fact]
     public async Task Host_StopAsync_WaitsForInflightConnection()
     {
-        HoldHostedServer.Release = new CancellationTokenSource();
+        using var release = new CancellationTokenSource();
 
-        using var host = BuildHost<HoldHostedServer>(options =>
-        {
-            options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
-            options.ShutdownTimeout = TimeSpan.FromSeconds(5);
-        });
+        using var host = BuildHost(
+            context => TestHandlers.HoldAsync(context, release.Token),
+            options =>
+            {
+                options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
+                options.ShutdownTimeout = TimeSpan.FromSeconds(5);
+            });
 
         await host.StartAsync();
-        var server = host.Services.GetRequiredService<HoldHostedServer>();
+        var server = host.Services.GetRequiredService<ChannelServer>();
 
         using var client = await TestClient.ConnectAsync((IPEndPoint)server.LocalEndPoint!);
 
@@ -110,19 +76,50 @@ public sealed class HostingTests
         await Task.Delay(100);
         Assert.False(stopTask.IsCompleted);
 
-        HoldHostedServer.Release.Cancel();
+        release.Cancel();
         await stopTask.WaitAsync(TestWaits.DefaultTimeout);
         Assert.True(stopTask.IsCompletedSuccessfully);
     }
 
     [Fact]
+    public async Task Host_StopAsync_AbortsConnections_WhenShutdownTimeoutExceeded()
+    {
+        using var never = new CancellationTokenSource();
+        var accepted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var host = BuildHost(
+            async context =>
+            {
+                accepted.TrySetResult();
+                context.ConnectionClosed.Register(() => closed.TrySetResult());
+                await TestHandlers.HoldAsync(context, never.Token);
+            },
+            options =>
+            {
+                options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
+                options.ShutdownTimeout = TimeSpan.FromMilliseconds(200);
+            });
+
+        await host.StartAsync();
+        var server = host.Services.GetRequiredService<ChannelServer>();
+        using var client = await TestClient.ConnectAsync((IPEndPoint)server.LocalEndPoint!);
+        await accepted.Task.WaitAsync(TestWaits.DefaultTimeout);
+
+        await host.StopAsync().WaitAsync(TestWaits.DefaultTimeout);
+
+        await TestClient.AssertConnectionClosedAsync(client.GetStream());
+        await closed.Task.WaitAsync(TestWaits.DefaultTimeout);
+    }
+
+    [Fact]
     public async Task Host_Dispose_StopsServer()
     {
-        var host = BuildHost<EchoHostedServer>(options =>
+        var host = BuildHost(TestHandlers.EchoAsync, options =>
             options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0));
 
         await host.StartAsync();
-        var server = host.Services.GetRequiredService<EchoHostedServer>();
+        var server = host.Services.GetRequiredService<ChannelServer>();
         var endPoint = (IPEndPoint)server.LocalEndPoint!;
 
         host.Dispose();
@@ -131,11 +128,23 @@ public sealed class HostingTests
         Assert.False(await TestClient.TryConnectAsync(endPoint));
     }
 
-    private static IHost BuildHost<TChannelServer>(Action<ChannelServerOptions> configure)
-        where TChannelServer : ChannelServerBase
+    private static IHost BuildHost(
+        Func<ChannelContext, Task> handler,
+        Action<ChannelServerOptions> configure)
     {
         var builder = Host.CreateApplicationBuilder();
-        builder.Services.AddChannelServer<TChannelServer>(configure);
+        builder.Services.AddSingleton(sp =>
+        {
+            var options = new ChannelServerOptions();
+            configure(options);
+
+            return new ChannelServer(
+                options,
+                pipeline => pipeline.Run(context => handler(context)),
+                sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IServiceScopeFactory>());
+        });
+        builder.Services.AddHostedService<TestChannelServerRunner>();
         return builder.Build();
     }
 }

@@ -1,7 +1,7 @@
 # foundation-namespace-conventions Specification
 
 ## Purpose
-定义 foundation 类库中 Options 类型、DI 扩展的命名空间与物理目录约定，确保类型归属可预测且不改变既有注册行为。
+定义 foundation 类库中 Options 类型、DI 辅助类型的命名空间与物理目录约定，确保类型归属可预测。
 ## Requirements
 ### Requirement: Options 类型位于 Microsoft.Extensions.Options
 
@@ -19,15 +19,9 @@ foundation 类库中所有以 `Options` 结尾的配置类型 MUST 声明在 `Mi
 - **THEN** 两者均为 `Microsoft.Extensions.Options`
 - **AND** 不再出现 `namespace Galosys.Foundation.Doris` 的 `DorisOptions` 或 `namespace System` 的 `NatsOptions`
 
-### Requirement: DI 注册与辅助类型位于 Microsoft.Extensions.DependencyInjection
+### Requirement: DI 辅助类型位于 Microsoft.Extensions.DependencyInjection
 
-foundation 类库中用于 `IServiceCollection` 注册或 DI 服务解析的扩展类型 MUST 声明在 `Microsoft.Extensions.DependencyInjection` 命名空间。
-
-#### Scenario: AddChannelServer 扩展的命名空间
-
-- **WHEN** 通过反射读取 `ChannelServerServiceCollectionExtensions`
-- **THEN** 其 `Namespace` 为 `Microsoft.Extensions.DependencyInjection`
-- **AND** `AddChannelServer<TChannelServer>` 仍可在 `IServiceCollection` 上调用
+foundation 类库中用于 DI 服务解析的辅助类型 MUST 声明在 `Microsoft.Extensions.DependencyInjection` 命名空间。
 
 #### Scenario: Nats 服务解析辅助的命名空间
 
@@ -46,22 +40,5 @@ foundation 类库中用于 `IServiceCollection` 注册或 DI 服务解析的扩�
 
 #### Scenario: DI 文件目录
 
-- **WHEN** 检查 `ChannelServerServiceCollectionExtensions.cs` 与 `ServiceProviderExtensions.cs`
-- **THEN** 它们分别位于所属项目的 `Microsoft/Extensions/DependencyInjection/` 目录下
-
-### Requirement: 命名空间迁移不改变注册行为
-
-迁移命名空间后，`AddChannelServer<TChannelServer>` MUST 继续注册同一个 `TChannelServer` 实例、`IChannelServer` 映射和宿主服务，既有行为测试 MUST 保持通过。
-
-#### Scenario: Primitives 构建与测试通过
-
-- **WHEN** 执行 `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
-- **THEN** 构建成功
-- **WHEN** 执行 `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
-- **THEN** 全部测试通过，包括既有的 `AddChannelServer_RegistersSameServerInstance`
-
-#### Scenario: NetServer 示例继续编译
-
-- **WHEN** 执行 `dotnet build samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
-- **THEN** 构建成功
-- **AND** `SampleChannelServer` 能解析 `ChannelServerOptions` 与 `ChannelServerBase`
+- **WHEN** 检查 `ServiceProviderExtensions.cs`
+- **THEN** 它位于所属项目的 `Microsoft/Extensions/DependencyInjection/` 目录下

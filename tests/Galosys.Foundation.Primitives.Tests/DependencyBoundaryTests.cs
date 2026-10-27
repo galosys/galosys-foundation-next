@@ -7,7 +7,7 @@ public sealed class DependencyBoundaryTests
     [Fact]
     public void CoreAssembly_DoesNotReferenceAspNetCore()
     {
-        var references = typeof(ChannelServerBase).Assembly.GetReferencedAssemblies();
+        var references = typeof(ChannelServer).Assembly.GetReferencedAssemblies();
 
         Assert.DoesNotContain(
             references,

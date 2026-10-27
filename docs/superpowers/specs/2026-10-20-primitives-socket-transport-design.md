@@ -8,6 +8,10 @@
 | 非目标 | 不涉及 HTTP/gRPC、不做消息总线、不改 `MafSample.*` 示例的逻辑 |
 | 关联 | 后续由 `/opsx-propose-x` 拆解为 `openspec/changes/<name>/` |
 
+> 2026-10-22 更新：P1.5 将移除 `ChannelServerBase`，改为 sealed `ChannelServer` + `ChannelServerCore` 组合；详见
+> [`2026-10-22-primitives-server-composition-design.md`](2026-10-22-primitives-server-composition-design.md)。
+> 本文 §5.3 的继承方案仅作历史记录。
+
 ---
 
 ## 1. 背景
@@ -196,7 +200,11 @@ public interface IChannelServer : IAsyncDisposable, IDisposable
 - `StartAsync` 语义变更见 §13-Q1；`RunAsync` 保证旧消费方零改动迁移。
 - `IDisposable` 保留为兜底（同步释放），`IAsyncDisposable` 为主路径。
 
-### 5.3 `ChannelServerBase`（保留，降级为兼容外观 + 组合入口）
+### 5.3 `ChannelServerBase`（P1.5 移除，改为组合入口）
+
+> 2026-10-22 更新：`ChannelServerBase` 不再保留。P1.5 改为 sealed `ChannelServer` + `ChannelServerCore`，
+> 详见 [`2026-10-22-primitives-server-composition-design.md`](2026-10-22-primitives-server-composition-design.md)。
+> 下面的继承代码是历史方案，不再实施。
 
 ```csharp
 public abstract class ChannelServerBase : IChannelServer
@@ -256,6 +264,10 @@ public sealed class ChannelServerOptions
 `IOQueueCount` 与 `IdleTimeout` 不再出现在 P1 Options 中：前者是 Kestrel 特有概念，后者没有消费它的中间件。
 
 ### 5.6 消息层（L3）
+
+> 2026-10-22 更新：P2 设计已拆分为 `IMessageFramer`（字节级 codec）+ `IMessageCodec<T>`（消息级 codec），详见
+> [`2026-10-22-primitives-message-frame-codec-design.md`](2026-10-22-primitives-message-frame-codec-design.md)。
+> 下文的 `IMessageFramer<T>` 仅为历史方案，不再实施。
 
 ```csharp
 public interface IMessageFramer<T>
@@ -477,7 +489,10 @@ src/Galosys.Foundation.Primitives/
 | 阶段 | 内容 | 验收标准 |
 |---|---|---|
 | P1 基架 | 自包含 socket transport + 管线 + Options + 每连接 scope + 优雅停机；**删除**旧收/发循环 | `NetServer.ConsoleApp` 改用新 API 后行为等价；60 个 loopback/单元测试通过；核心程序集无 ASP.NET 引用 |
-| P2 消息层 | `IMessageFramer<T>` + 三种内置 framer + `IChannelSession<T>` + `MaxMessageSize` | 半包/粘包/超限拒绝测试通过 |
+| P1.5a 入口组合化 | 抽 `ChannelServerCore` + sealed `ChannelServer`；**删除** `ChannelServerBase`；移除泛型 DI 入口 | 单 server 行为等价；旧测试迁移后全绿 |
+| P1.5b 多服务器 | `ChannelServerGroup` + 多 server 启停/失败回滚 | 一个 host 两个 server 同时监听、独立 options、统一停机 |
+| P2 消息层 | `IMessageFramer` + `IMessageCodec<T>` + `IChannelSession<T>`（见 P2 设计文档） | 半包/粘包/超限/EOF/取消测试通过 |
+| P2.5 协议分发 | 同端口 `IChannelProtocolSelector` + `ProtocolDispatcher`（按需） | 同端口两种协议可连接；TLS ALPN 在 P3 接入 |
 | P3 TLS | `ChannelTlsOptions` + `UseTls`（服务端/客户端） | 双向 TLS 握手、证书校验失败路径测试通过 |
 | P4 客户端 | `ChannelClientBase`/`ChannelClient` + 状态机 + `ChannelReconnectPolicy` + 心跳接入点 | 断线重连、退避、取消、终态测试通过（假时钟） |
 | P5 收尾 | NamedPipe transport + Diagnostics + 文档 + 示例迁移 | metrics/trace 可见；`AGENTS.md` 更新（新增测试命令） |
@@ -521,7 +536,7 @@ P1 内即完成一次"旧代码删除"，避免两套内核长期并存。
 |---|---|---|---|
 | Q1 | `StartAsync` 是否改为"返回即监听"，另加 `RunAsync` | 是 | 符合 `IHostedService` 约定；旧消费方用 `RunAsync` |
 | Q2 | `ChannelClientBase` 保持 abstract + 新增 `ChannelClient` | 是 | 保留扩展性，默认实现开箱可用 |
-| Q3 | `ChannelServerBase` 保留继承 + `Configure` 组合缝 | 是 | 现有子类零改动 |
+| Q3 | `ChannelServerBase` 保留继承 + `Configure` 组合缝 | **已变更：否，P1.5 移除** | 2026-10-22 改为 sealed `ChannelServer` + `ChannelServerCore`；见组合设计文档 |
 | Q4 | `AbstractChannelHandler` 死代码 | 直接删 | 无引用 |
 | Q5 | 客户端首版是否支持多 EndPoint 故障转移 | 否，仅预留字段 | 重连先做单地址 |
 | Q6 | 客户端是否进本轮（P4） | 是 | 但排在服务端之后 |

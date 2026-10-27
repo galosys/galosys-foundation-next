@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Options;
 
@@ -13,48 +14,82 @@ internal static class TestWaits
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
 }
 
-internal sealed class TestChannelServer : ChannelServerBase
+internal sealed class TestChannelServer : IChannelServer
 {
-    private readonly Func<ChannelContext, Task> _handler;
+    private readonly ChannelServer _server;
 
-    public TestChannelServer(ChannelServerOptions options, Func<ChannelContext, Task> handler)
-        : base(options)
+    public TestChannelServer(
+        ChannelServerOptions options,
+        Func<ChannelContext, Task> handler,
+        IServiceScopeFactory? scopeFactory = null)
     {
-        _handler = handler;
+        _server = new ChannelServer(
+            options,
+            pipeline => pipeline.Run(context => handler(context)),
+            loggerFactory: null,
+            scopeFactory: scopeFactory);
     }
 
-    protected override Task ChannelHandleAsync(ChannelContext context) => _handler(context);
+    public EndPoint? LocalEndPoint => _server.LocalEndPoint;
+
+    public Task StartAsync(CancellationToken ct) => _server.StartAsync(ct);
+
+    public Task RunAsync(CancellationToken ct) => _server.RunAsync(ct);
+
+    public Task StopAsync(CancellationToken ct) => _server.StopAsync(ct);
+
+    public ValueTask DisposeAsync() => _server.DisposeAsync();
+
+    public void Dispose() => _server.Dispose();
 }
 
-internal sealed class ConfiguredTestServer : ChannelServerBase
+internal sealed class ConfiguredTestServer : IChannelServer
 {
-    private readonly Action<IChannelPipeline> _configure;
-    private readonly Func<ChannelContext, Task> _handler;
+    private readonly ChannelServer _server;
 
     public ConfiguredTestServer(
         ChannelServerOptions options,
         Action<IChannelPipeline> configure,
-        Func<ChannelContext, Task> handler)
-        : base(options)
+        Func<ChannelContext, Task>? handler = null)
     {
-        _configure = configure;
-        _handler = handler;
+        // 保留旧构造签名；终端处理器由 configure 中的 Run 决定。
+        _ = handler;
+        _server = new ChannelServer(options, configure);
     }
 
-    protected override void Configure(IChannelPipeline pipeline) => _configure(pipeline);
+    public EndPoint? LocalEndPoint => _server.LocalEndPoint;
 
-    protected override Task ChannelHandleAsync(ChannelContext context) => _handler(context);
+    public Task StartAsync(CancellationToken ct) => _server.StartAsync(ct);
+
+    public Task RunAsync(CancellationToken ct) => _server.RunAsync(ct);
+
+    public Task StopAsync(CancellationToken ct) => _server.StopAsync(ct);
+
+    public ValueTask DisposeAsync() => _server.DisposeAsync();
+
+    public void Dispose() => _server.Dispose();
+}
+
+internal sealed class TestChannelServerRunner : IHostedService
+{
+    private readonly ChannelServer _server;
+
+    public TestChannelServerRunner(ChannelServer server) => _server = server;
+
+    public Task StartAsync(CancellationToken ct) => _server.StartAsync(ct);
+
+    public Task StopAsync(CancellationToken ct) => _server.StopAsync(CancellationToken.None);
 }
 
 internal sealed class TestServerHandle : IAsyncDisposable
 {
-    public TestServerHandle(ChannelServerBase server, IPEndPoint endPoint)
+    public TestServerHandle(IChannelServer server, IPEndPoint endPoint)
     {
         Server = server;
         EndPoint = endPoint;
     }
 
-    public ChannelServerBase Server { get; }
+    public IChannelServer Server { get; }
 
     public IPEndPoint EndPoint { get; }
 
@@ -75,10 +110,7 @@ internal static class TestServer
         };
         configure?.Invoke(options);
 
-        var server = new TestChannelServer(options, handler)
-        {
-            ScopeFactory = scopeFactory,
-        };
+        var server = new TestChannelServer(options, handler, scopeFactory);
 
         await server.StartAsync(CancellationToken.None).ConfigureAwait(false);
         return new TestServerHandle(server, (IPEndPoint)server.LocalEndPoint!);
@@ -159,7 +191,7 @@ internal static class TestClient
         }
     }
 
-    public static async Task WaitUntilListeningAsync(ChannelServerBase server)
+    public static async Task WaitUntilListeningAsync(IChannelServer server)
     {
         var deadline = DateTime.UtcNow + TestWaits.DefaultTimeout;
         while (server.LocalEndPoint is null)

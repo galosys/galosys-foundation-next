@@ -10,6 +10,5 @@
   <ItemGroup>
     <PackageReference Include="galosys.foundation.castle.core" Version="26.9.15.1" />
     <PackageReference Include="galosys.foundation.serilog" Version="26.9.15.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
   </ItemGroup>
 </Project>
