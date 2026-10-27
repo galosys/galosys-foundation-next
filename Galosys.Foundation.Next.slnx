@@ -2,6 +2,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/AopSample.ConsoleApp/AopSample.ConsoleApp.csproj" Id="14ad0c7c-d903-4820-bb5d-abf52e96eb5b" />
     <Project Path="samples/DataIngestionSample.ConsoleApp/DataIngestionSample.ConsoleApp.csproj" Id="11be50f7-8be7-470e-9553-fe013b7a92b4" />
+    <Project Path="samples/DTFx.ConsoleApp/DTFx.ConsoleApp.csproj" Id="9496cd4f-bb22-479f-b760-977a924bd7d5" />
     <Project Path="samples/MafSample.Adapter/MafSample.Adapter.csproj" Id="f8dcffda-b587-4e83-a982-95141db79365" />
     <Project Path="samples/MafSample.API/MafSample.API.csproj" Id="39a5756d-e643-4a69-bce1-31822b218ad5" />
     <Project Path="samples/MafSample.ConsoleApp/MafSample.ConsoleApp.csproj" Id="447c17a1-bc05-4f5f-966e-6c3e83eb8f17" />

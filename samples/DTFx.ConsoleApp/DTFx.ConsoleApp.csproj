@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-DTFx.ConsoleApp-54f9c6c2-2f54-4d8f-9fb8-383c98526e68</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="microsoft.azure.durabletask.core" Version="3.11.2" />
+    <PackageReference Include="microsoft.azure.durabletask.emulator" Version="2.6.0" />
+    <PackageReference Include="microsoft.durabletask.sqlserver" Version="1.8.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+  </ItemGroup>
+</Project>
