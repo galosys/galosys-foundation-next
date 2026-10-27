@@ -1,20 +1,19 @@
-using Microsoft.Extensions.Hosting.Net;
-using Microsoft.Extensions.Options;
 using System.Text;
+using Microsoft.Extensions.Hosting.Net;
+using Microsoft.Extensions.Logging;
 
 namespace NetServer.ConsoleApp
 {
-    public sealed class SampleChannelServer : ChannelServerBase
+    public sealed class SampleChannelHandler
     {
-        private readonly ILogger<SampleChannelServer> _logger;
+        private readonly ILogger<SampleChannelHandler> _logger;
 
-        public SampleChannelServer(ChannelServerOptions options, ILogger<SampleChannelServer> logger)
-            : base(options)
+        public SampleChannelHandler(ILogger<SampleChannelHandler> logger)
         {
             _logger = logger;
         }
 
-        protected override async Task ChannelHandleAsync(ChannelContext context)
+        public async Task HandleAsync(ChannelContext context)
         {
             var reader = context.Reader;
 

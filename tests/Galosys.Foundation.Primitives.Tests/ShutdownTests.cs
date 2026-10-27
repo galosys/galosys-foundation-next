@@ -69,7 +69,7 @@ public sealed class ShutdownTests
         using var never = new CancellationTokenSource();
         var accepted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var reentered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        ChannelServerBase? server = null;
+        IChannelServer? server = null;
 
         await using var handle = await TestServer.StartAsync(
             async context =>

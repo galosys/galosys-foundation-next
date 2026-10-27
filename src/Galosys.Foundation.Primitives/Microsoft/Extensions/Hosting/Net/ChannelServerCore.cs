@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -8,13 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Hosting.Net
 {
-    /// <summary>监听器基类：绑定、接受连接、执行管线、优雅停机。</summary>
-    public abstract class ChannelServerBase : IChannelServer
+    /// <summary>服务器生命周期内核：绑定、接受连接、执行管线、优雅停机。</summary>
+    internal sealed class ChannelServerCore
     {
         private static readonly TimeSpan AcceptLoopStopTimeout = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan AbortGracePeriod = TimeSpan.FromSeconds(1);
 
         private readonly ChannelServerOptions _options;
+        private readonly Action<IChannelPipeline> _configurePipeline;
         private readonly ConcurrentDictionary<string, ChannelContext> _activeConnections = new();
         private readonly ConcurrentDictionary<string, Task> _activeTasks = new();
         private readonly TaskCompletionSource _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -29,28 +30,26 @@ namespace Microsoft.Extensions.Hosting.Net
         private int _stopStarted;
         private int _disposed;
 
-        protected ChannelServerBase(EndPoint endPoint)
-            : this(new ChannelServerOptions { EndPoint = endPoint })
-        {
-        }
-
-        protected ChannelServerBase(ChannelServerOptions options)
+        public ChannelServerCore(
+            ChannelServerOptions options,
+            Action<IChannelPipeline> configurePipeline,
+            ILoggerFactory? loggerFactory,
+            IServiceScopeFactory? scopeFactory)
         {
             ArgumentNullException.ThrowIfNull(options);
+            ArgumentNullException.ThrowIfNull(configurePipeline);
+
             _options = options.Clone();
+            _configurePipeline = configurePipeline;
+            LoggerFactory = loggerFactory;
+            ScopeFactory = scopeFactory;
         }
 
-        internal IServiceScopeFactory? ScopeFactory { get; set; }
+        internal IServiceScopeFactory? ScopeFactory { get; }
 
-        internal ILoggerFactory? LoggerFactory { get; set; }
+        internal ILoggerFactory? LoggerFactory { get; }
 
         public EndPoint? LocalEndPoint { get; private set; }
-
-        /// <summary>默认管线：直接调用 <see cref="ChannelHandleAsync"/>。</summary>
-        protected virtual void Configure(IChannelPipeline pipeline) => pipeline.Run(ChannelHandleAsync);
-
-        /// <summary>处理单个连接。返回后框架负责关闭传输；异常只中止当前连接。</summary>
-        protected abstract Task ChannelHandleAsync(ChannelContext context);
 
         /// <summary>绑定端点并启动接受循环；绑定成功后返回。</summary>
         public async Task StartAsync(CancellationToken ct)
@@ -178,7 +177,7 @@ namespace Microsoft.Extensions.Hosting.Net
         private ChannelHandlerDelegate BuildPipeline()
         {
             var pipeline = new ChannelPipeline();
-            Configure(pipeline);
+            _configurePipeline(pipeline);
             return pipeline.Build();
         }
 

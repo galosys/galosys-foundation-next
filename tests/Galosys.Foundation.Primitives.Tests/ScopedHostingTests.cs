@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Net;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Primitives.Tests;
@@ -26,20 +27,6 @@ internal sealed class ScopedProbe : IDisposable
     public void Dispose() => Interlocked.Increment(ref _disposedCount);
 }
 
-internal sealed class ScopedProbeServer : ChannelServerBase
-{
-    public ScopedProbeServer(ChannelServerOptions options)
-        : base(options)
-    {
-    }
-
-    protected override Task ChannelHandleAsync(ChannelContext context)
-    {
-        _ = context.Services.GetRequiredService<ScopedProbe>();
-        return Task.CompletedTask;
-    }
-}
-
 public sealed class ScopedHostingTests
 {
     [Fact]
@@ -49,16 +36,30 @@ public sealed class ScopedHostingTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddScoped<ScopedProbe>();
-        builder.Services.AddChannelServer<ScopedProbeServer>(options =>
+        builder.Services.AddSingleton(sp =>
         {
-            options.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
-            options.ShutdownTimeout = TimeSpan.FromSeconds(1);
+            var options = new ChannelServerOptions
+            {
+                EndPoint = new IPEndPoint(IPAddress.Loopback, 0),
+                ShutdownTimeout = TimeSpan.FromSeconds(1),
+            };
+
+            return new ChannelServer(
+                options,
+                pipeline => pipeline.Run(context =>
+                {
+                    _ = context.Services.GetRequiredService<ScopedProbe>();
+                    return Task.CompletedTask;
+                }),
+                sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IServiceScopeFactory>());
         });
+        builder.Services.AddHostedService<TestChannelServerRunner>();
 
         using var host = builder.Build();
         await host.StartAsync();
 
-        var server = host.Services.GetRequiredService<ScopedProbeServer>();
+        var server = host.Services.GetRequiredService<ChannelServer>();
         var endPoint = (IPEndPoint)server.LocalEndPoint!;
 
         for (var i = 0; i < 2; i++)

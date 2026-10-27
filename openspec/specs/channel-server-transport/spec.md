@@ -1,7 +1,7 @@
 # channel-server-transport Specification
 
 ## Purpose
-TBD - created by archiving change primitives-socket-p1-1. Update Purpose after archive.
+定义自包含 socket 服务端传输的生命周期、连接上下文、作用域释放、优雅停机、资源配置与依赖边界。
 ## Requirements
 ### Requirement: 监听器启动语义
 
@@ -25,6 +25,53 @@ The implementation SHALL satisfy this requirement. `IChannelServer.StartAsync` �
 - **THEN** `RunAsync` 在 `StartAsync` 完成后阻塞，直到 `StopAsync` 被调用或 `ct` 取消
 - **AND** `ct` 取消被视为正常停机，不向宿主抛出取消异常
 
+### Requirement: 组合式服务器入口
+
+The implementation SHALL provide a public sealed `ChannelServer` that implements `IChannelServer` without requiring inheritance. The constructor MUST accept `ChannelServerOptions`, an `Action<IChannelPipeline>` pipeline configuration callback, and optional `ILoggerFactory` / `IServiceScopeFactory` dependencies. The options MUST be cloned so independent `ChannelServer` instances do not share mutable configuration.
+
+#### Scenario: 组合式服务器启动并回显
+
+- **WHEN** 使用 `ChannelServer` 绑定 loopback 端点，并通过 `pipeline => pipeline.Run(handler)` 配置回显处理器
+- **THEN** `StartAsync` 返回后 `LocalEndPoint` 非 null
+- **AND** 客户端连接后可以收到完整回显
+- **AND** `StopAsync` 后不再接受新连接
+
+#### Scenario: 两个实例使用独立配置
+
+- **WHEN** 创建两个 `ChannelServer`，分别绑定不同的 loopback 端点并设置不同的 `ShutdownTimeout` / `MaxConnections`
+- **THEN** 两个实例同时监听且 `LocalEndPoint` 不同
+- **AND** 停止其中一个不会停止另一个
+- **AND** 修改原始 `ChannelServerOptions` 不影响任一已构造实例
+
+### Requirement: 唯一公开服务器实现
+
+The implementation SHALL expose sealed `ChannelServer` as the only public server implementation. `ChannelServerBase` MUST be removed from the assembly's public API, and `ChannelServerCore` MUST remain internal. All lifecycle requirements in `channel-server-transport` MUST apply to `ChannelServer`.
+
+#### Scenario: 程序集不再暴露 ChannelServerBase
+
+- **WHEN** 通过反射检查 `Galosys.Foundation.Primitives` 程序集中的 `Microsoft.Extensions.Hosting.Net.ChannelServerBase`
+- **THEN** 该类型不存在
+- **AND** `ChannelServer` 是 public sealed 类型并实现 `IChannelServer`
+- **AND** `ChannelServerCore` 不是 public 类型
+
+#### Scenario: 组合式服务器继续满足生命周期
+
+- **WHEN** 使用 `ChannelServer` 绑定 loopback 端点并启动
+- **THEN** 绑定成功后才返回，`LocalEndPoint` 非 null
+- **AND** 停止后不再接受新连接
+- **AND** 重复 `StopAsync` / `DisposeAsync` 不抛异常
+
+### Requirement: pipeline 配置与启动失败
+
+`configurePipeline` MUST be invoked during `StartAsync` before the listener is bound. The callback MUST call `IChannelPipeline.Run`; when no terminal handler is configured, startup MUST fail with `InvalidOperationException` and `LocalEndPoint` MUST remain null. `ChannelServer` MUST preserve the `StartAsync` / `RunAsync` / `StopAsync` / `DisposeAsync` semantics defined for `IChannelServer`.
+
+#### Scenario: 缺少 Run 时启动失败
+
+- **WHEN** 使用一个不调用 `Run` 的 pipeline 配置回调启动 `ChannelServer`
+- **THEN** `StartAsync` 抛出 `InvalidOperationException`
+- **AND** `LocalEndPoint` 保持 null
+- **AND** 不会留下监听 socket
+
 ### Requirement: 连接建立与身份
 
 The implementation SHALL satisfy this requirement. 每个被接受的连接必须对应一个 `ChannelContext` 实例，并具有非空且在该服务器内唯一的 `ConnectionId`。`LocalEndPoint` 与 `RemoteEndPoint` 必须反映底层连接端点。`ChannelContext` 的公开属性不得提供 setter，外部代码不得构造或伪造连接上下文；`Items` 是连接内可变字典，`UseTransport`/`Abort`/`DisposeAsync` 是显式连接操作。
@@ -42,7 +89,7 @@ The implementation SHALL satisfy this requirement. 每个被接受的连接必�
 
 ### Requirement: 连接关闭与作用域释放顺序
 
-The implementation SHALL satisfy this requirement. 当服务器配置了 `IServiceScopeFactory`（由宿主集成在 p1-2 注入）时，每个连接必须拥有独立的 `IServiceScope`，通过 `ChannelContext.Services` 暴露。未配置工厂的手工构造场景使用共享空作用域（无 DI），仅用于测试或无容器宿主。连接关闭时，`ConnectionClosed` 令牌必须在作用域释放之前取消，且恰好取消一次；通过 `Register` 注册的回调不保证在作用域释放前全部执行完毕。处理器返回、连接被对端重置、`Abort` 调用三种情况都必须遵守该顺序。
+The implementation SHALL satisfy this requirement. 当 `ChannelServer` 构造时传入 `IServiceScopeFactory` 时，每个连接必须拥有独立的 `IServiceScope`，通过 `ChannelContext.Services` 暴露。未传入工厂的手工构造场景使用共享空作用域（无 DI），仅用于测试或无容器宿主。连接关闭时，`ConnectionClosed` 令牌必须在作用域释放之前取消，且恰好取消一次；通过 `Register` 注册的回调不保证在作用域释放前全部执行完毕。处理器返回、连接被对端重置、`Abort` 调用三种情况都必须遵守该顺序。
 
 #### Scenario: 处理器返回后关闭
 
@@ -179,4 +226,3 @@ The implementation SHALL satisfy this requirement. `Galosys.Foundation.Primitive
 
 - **WHEN** 一个普通控制台宿主引用 `Galosys.Foundation.Primitives`
 - **THEN** 宿主无需安装 ASP.NET Core 共享框架即可构建和运行
-

@@ -86,6 +86,9 @@ namespace Microsoft.Extensions.Options
         {
             var clone = (ChannelServerOptions)MemberwiseClone();
 
+            if (EndPoint is IPEndPoint ipEndPoint)
+                clone.EndPoint = new IPEndPoint(ipEndPoint.Address, ipEndPoint.Port);
+
             if (KeepAlive is not null)
             {
                 clone.KeepAlive = new ChannelKeepAliveOptions

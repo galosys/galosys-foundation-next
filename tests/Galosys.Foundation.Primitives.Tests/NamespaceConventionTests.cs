@@ -7,7 +7,7 @@ public sealed class NamespaceConventionTests
     [Fact]
     public void OptionsTypes_UseMicrosoftExtensionsOptionsNamespace()
     {
-        var assembly = typeof(ChannelServerBase).Assembly;
+        var assembly = typeof(ChannelServer).Assembly;
 
         Assert.NotNull(assembly.GetType("Microsoft.Extensions.Options.ChannelServerOptions"));
         Assert.NotNull(assembly.GetType("Microsoft.Extensions.Options.ChannelKeepAliveOptions"));
@@ -16,11 +16,25 @@ public sealed class NamespaceConventionTests
     }
 
     [Fact]
-    public void DiExtensions_UseMicrosoftExtensionsDependencyInjectionNamespace()
+    public void RemovedServerBaseAndDiExtensions_AreNotPublic()
     {
-        var assembly = typeof(ChannelServerBase).Assembly;
+        var assembly = typeof(ChannelServer).Assembly;
 
-        Assert.NotNull(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerServiceCollectionExtensions"));
-        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerServiceCollectionExtensions"));
+        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerBase"));
+        Assert.Null(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerServiceCollectionExtensions"));
+    }
+
+    [Fact]
+    public void ChannelServer_IsOnlyPublicServerImplementation()
+    {
+        var assembly = typeof(ChannelServer).Assembly;
+
+        Assert.True(typeof(ChannelServer).IsPublic);
+        Assert.True(typeof(ChannelServer).IsSealed);
+        Assert.True(typeof(IChannelServer).IsAssignableFrom(typeof(ChannelServer)));
+
+        var core = assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerCore");
+        Assert.NotNull(core);
+        Assert.False(core.IsPublic);
     }
 }
