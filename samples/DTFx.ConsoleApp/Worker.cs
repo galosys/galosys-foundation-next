@@ -1,46 +1,52 @@
 using DurableTask.Core;
-using DurableTask.Emulator;
 
 namespace DTFx.ConsoleApp
 {
-    public class Worker(ILogger<Worker> logger) : IHostedService
+    public class Worker(ILogger<Worker> logger, IServiceScopeFactory scopeFactory) : BackgroundService
     {
-        TaskHubWorker _worker;
-        public async Task StartAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //var connectionString = "";
-            //var svc = new SqlOrchestrationService(new SqlOrchestrationServiceSettings(connectionString));
-            //await svc.CreateIfNotExistsAsync();
-
-            var svc = new LocalOrchestrationService();
-
-            _worker = new TaskHubWorker(svc);
-            _worker.AddTaskOrchestrations(typeof(SampleOrchestration));
-            _worker.AddTaskActivities(typeof(SayHelloActivity));
-            await _worker.StartAsync();
-
-            var client = new TaskHubClient(svc);
-            await client.CreateOrchestrationInstanceAsync(typeof(SampleOrchestration), "Hello");
-        }
-
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            await _worker.StopAsync();
+            using (var scope = scopeFactory.CreateScope())
+            {
+                var sp = scope.ServiceProvider;
+                var client = sp.GetRequiredService<TaskHubClient>();
+                var instance = await client.CreateOrchestrationInstanceAsync(typeof(SampleOrchestration), "user-1");
+            }
         }
     }
 
     class SampleOrchestration : TaskOrchestration<string, string>
     {
+        private readonly ILogger<SampleOrchestration> _logger;
+
+        public SampleOrchestration(ILogger<SampleOrchestration> logger)
+        {
+            _logger = logger;
+        }
+
         public override Task<string> RunTask(OrchestrationContext context, string input)
         {
+            if (context.IsReplaying)
+                _logger.LogInformation(">>>>> Orchestration replaying: {input} <<<<<", input);
+            else
+                _logger.LogInformation(">>>>> Orchestration: {input} <<<<<", input);
+
             return context.ScheduleTask<string>(typeof(SayHelloActivity), input);
         }
     }
 
     class SayHelloActivity : TaskActivity<string, string>
     {
+        private readonly ILogger<SayHelloActivity> _logger;
+
+        public SayHelloActivity(ILogger<SayHelloActivity> logger)
+        {
+            _logger = logger;
+        }
+
         protected override string Execute(TaskContext context, string input)
         {
+            _logger.LogInformation(">>>>> Activity: {input} <<<<<", input);
             return "ok";
         }
     }
