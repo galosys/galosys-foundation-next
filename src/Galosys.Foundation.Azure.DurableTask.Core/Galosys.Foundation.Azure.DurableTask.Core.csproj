@@ -1,5 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
-		<PackageReference Include="microsoft.azure.durabletask.core"/>
+	  <Compile Remove="DurableTask\Core\DurableTaskAttribute.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="galosys.foundation.core" />
+		<PackageReference Include="microsoft.azure.durabletask.core" />
+		<PackageReference Include="microsoft.extensions.hosting" />
+		<PackageReference Include="microsoft.azure.durabletask.emulator" />
 	</ItemGroup>
 </Project>
