@@ -1,15 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
 		<UserSecretsId>dotnet-DataIngestionSample.ConsoleApp-f1bacc3d-92a6-4ec7-9f0b-efe523af09a9</UserSecretsId>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="microsoft.extensions.dataingestion.markdig" Version="10.10.0-preview.1.26459.2" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
-		<PackageReference Include="microsoft.extensions.dataingestion" Version="10.10.0-preview.1.26459.2" />
+		<PackageReference Include="microsoft.extensions.dataingestion.markdig"  />
+		<PackageReference Include="Microsoft.Extensions.Hosting"  />
+		<PackageReference Include="microsoft.extensions.dataingestion" />
 	</ItemGroup>
 </Project>

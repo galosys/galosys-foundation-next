@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
+using System;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading.Tasks;
 
 namespace Galosys.Foundation.Doris
 {
