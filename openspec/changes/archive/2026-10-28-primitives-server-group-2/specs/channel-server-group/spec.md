@@ -2,7 +2,7 @@
 
 ### Requirement: 宿主集成
 
-The implementation SHALL allow a `ChannelServerGroup` to be hosted by `ChannelServerGroupHostedService`. The hosted service MUST forward `IHostedService.StartAsync` to `ChannelServerGroup.StartAsync` with the host cancellation token, forward `StopAsync` to `ChannelServerGroup.StopAsync(CancellationToken.None)`, and forward `IAsyncDisposable.DisposeAsync` to the group. The hosted service MUST NOT change the group's ordering, rollback, aggregation, or idempotence semantics. A group start failure MUST propagate to the host, and a group stop failure MUST surface as the group's `AggregateException`.
+`ChannelServerGroupHostedService` MUST host a `ChannelServerGroup` by forwarding `IHostedService.StartAsync` with the host token, `StopAsync` as `ChannelServerGroup.StopAsync(CancellationToken.None)`, and `IAsyncDisposable.DisposeAsync` to the group. It MUST NOT change the group's ordering, rollback, aggregation, or idempotence semantics; start failures propagate unchanged, and stop failures surface as the group's `AggregateException`.
 
 #### Scenario: 宿主启停映射到组
 

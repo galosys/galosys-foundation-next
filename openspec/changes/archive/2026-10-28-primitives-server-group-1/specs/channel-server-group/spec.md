@@ -2,7 +2,7 @@
 
 ### Requirement: 组构造与服务器集合
 
-The implementation SHALL provide a public sealed `ChannelServerGroup` in the `Microsoft.Extensions.Hosting.Net` namespace that implements `IAsyncDisposable` and `IDisposable`. The constructor MUST accept `params IChannelServer[] servers`, reject a null array or any null element with `ArgumentNullException`, copy the input array, and expose the servers through `IReadOnlyList<IChannelServer> Servers`. An empty group MUST be valid and all lifecycle operations on it MUST complete without error. The group MUST NOT replace or wrap the lifecycle semantics of `IChannelServer`; each server MUST keep its own options, `LocalEndPoint`, connection handling, and `ShutdownTimeout`.
+`ChannelServerGroup` MUST be a public sealed type in `Microsoft.Extensions.Hosting.Net` implementing `IAsyncDisposable` and `IDisposable`. The constructor MUST accept `params IChannelServer[] servers`, reject a null array or null element, defensively copy the array, and expose `IReadOnlyList<IChannelServer> Servers`. An empty group MUST be valid, and the group MUST NOT alter a server's options, `LocalEndPoint`, connection handling, or `ShutdownTimeout`.
 
 #### Scenario: 两个服务器同时监听
 
@@ -25,7 +25,7 @@ The implementation SHALL provide a public sealed `ChannelServerGroup` in the `Mi
 
 ### Requirement: 顺序启动与失败回滚
 
-`ChannelServerGroup.StartAsync` MUST start the servers sequentially in `Servers` order, passing the caller's cancellation token to each `IChannelServer.StartAsync`. If any start fails, including cancellation, the group MUST stop the servers whose start completed during this call in reverse order using `CancellationToken.None`, and MUST rethrow the original exception with the same type and instance. Rollback failures MUST NOT replace or mask the original exception; they MAY be attached to the original exception's `Data` for diagnostics. Servers whose start did not complete MUST NOT be stopped.
+`StartAsync` MUST start servers sequentially in `Servers` order with the caller's token. On any failure, including cancellation, it MUST stop the servers started by this call in reverse order with `CancellationToken.None`, then rethrow the original exception instance. Rollback failures MAY be attached to `Exception.Data`, but MUST NOT replace the original. Servers whose start did not complete MUST NOT be stopped.
 
 #### Scenario: 第二个服务器绑定失败时回滚第一个
 
@@ -49,7 +49,7 @@ The implementation SHALL provide a public sealed `ChannelServerGroup` in the `Mi
 
 ### Requirement: 并行停机与失败聚合
 
-`ChannelServerGroup.StopAsync` MUST invoke `StopAsync` on every server in parallel, pass the caller's cancellation token to each invocation, and wait for all invocations to complete. If one or more servers fail to stop, the group MUST throw an `AggregateException` whose inner exceptions contain every observed failure, including cancellation. The group MUST NOT skip remaining servers because one failed and MUST NOT impose a group-level shutdown timeout; each server MUST continue to use its own `ChannelServerOptions.ShutdownTimeout`.
+`StopAsync` MUST call `StopAsync` on every server in parallel with the caller's token and wait for all calls. Every observed failure, including cancellation, MUST be reported in one `AggregateException`; a failure MUST NOT skip remaining servers. The group MUST NOT impose a group-level timeout, and each server keeps its own `ShutdownTimeout`.
 
 #### Scenario: 统一停机停止所有服务器
 
@@ -79,7 +79,7 @@ The implementation SHALL provide a public sealed `ChannelServerGroup` in the `Mi
 
 ### Requirement: 幂等释放
 
-`ChannelServerGroup.DisposeAsync` MUST stop and dispose every server. It MUST be idempotent: repeated or concurrent calls after a successful disposal MUST return without disposing a server twice or throwing. `Dispose()` MUST synchronously wait for the same disposal operation. If stopping or disposing one server fails, the group MUST still attempt the remaining servers and MUST expose all failures in an `AggregateException`.
+`DisposeAsync` MUST stop and dispose every server and MUST be idempotent for repeated or concurrent calls after a successful disposal. `Dispose()` MUST synchronously wait for the same operation. A failure on one server MUST NOT skip the remaining servers, and all failures MUST be exposed in an `AggregateException`.
 
 #### Scenario: 重复释放不抛异常
 
