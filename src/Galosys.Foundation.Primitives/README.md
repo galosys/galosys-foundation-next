@@ -1,12 +1,14 @@
 # Galosys.Foundation.Primitives
 
-服务端 socket 传输层的最小基架：核心类型位于 `Microsoft.Extensions.Hosting.Net`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`，不提供库内 DI 注册。
+服务端 socket 传输层的最小基架：核心类型位于 `Microsoft.Extensions.Hosting.Net`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup` 与多服务器宿主注册。
 
 ## 能力
 
 - 自包含 socket transport：基于 `System.Net.Sockets` + `System.IO.Pipelines`，核心程序集不依赖 `Microsoft.AspNetCore.*` 或 Kestrel。
 - `ChannelContext`：连接视图（`ConnectionId`、端点、`Transport`、`ConnectionClosed`、`Services`）；公开属性无 setter，`Items` 为连接内可变字典。
 - `ChannelServer`：sealed 组合入口，通过构造函数接收 `ChannelServerOptions`、pipeline 配置回调和可选的 `ILoggerFactory` / `IServiceScopeFactory`。
+- `ChannelServerGroup`：按构造顺序启动、失败时逆序回滚、并行停机并聚合异常、释放幂等。
+- `ChannelServerDefinition` + `AddChannelServer` / `AddChannelServerGroup()`：把多个独立配置的 server 注册到宿主。
 - 每连接独立 `IServiceScope`（构造 `ChannelServer` 时传入 `IServiceScopeFactory` 后生效），连接关闭令牌先于作用域释放。
 - `Action<IChannelPipeline>`：中间件只包装 `Transport`，业务数据由终端处理器消费。
 - 优雅停机：停止 accept → 等待在途连接 → `ShutdownTimeout` 后强制 abort。
@@ -38,6 +40,54 @@ await server.RunAsync(cancellationToken);
 ```
 
 `StartAsync` 只负责绑定、监听并启动接受循环，返回即可连接；`RunAsync` 是“启动并阻塞到停机”的兼容入口。`pipeline` 回调在启动时执行一次，必须调用 `Run`。
+
+## 多服务器组合
+
+```csharp
+var http = new ChannelServer(
+    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
+    pipeline => pipeline.Run(HttpHandler));
+
+var mqtt = new ChannelServer(
+    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 1883) },
+    pipeline => pipeline.Run(MqttHandler));
+
+await using var group = new ChannelServerGroup(http, mqtt);
+await group.StartAsync(cancellationToken);
+
+// group.Servers[0].LocalEndPoint / group.Servers[1].LocalEndPoint
+
+await group.StopAsync(cancellationToken);
+```
+
+组按构造顺序串行启动；某个 server 启动失败时，已启动的 server 会按相反顺序停止，并重新抛出原始异常。
+停机并行执行，所有失败汇总为 `AggregateException`；`DisposeAsync` 可重复调用。
+
+## 多服务器宿主注册
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddChannelServer(new ChannelServerDefinition(
+    "http",
+    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
+    pipeline => pipeline.Run(HttpHandler)));
+
+builder.Services.AddChannelServer(new ChannelServerDefinition(
+    "mqtt",
+    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 1883) },
+    pipeline => pipeline.Run(MqttHandler)));
+
+builder.Services.AddChannelServerGroup();
+
+var host = builder.Build();
+host.Run();
+```
+
+注册顺序就是启动顺序；`ChannelServerGroupHostedService` 在宿主启动时按该顺序启动组，停机时并行停止。
+重复调用 `AddChannelServerGroup()` 是幂等的；只注册定义而不调用它时，定义不会监听。
+每个定义保留自己的 `ChannelServerOptions`，不存在全局 `ChannelServerOptions` 注册。
+每连接作用域来自容器的 `IServiceScopeFactory`；宿主 `ShutdownTimeout` 应大于最大的 server `ShutdownTimeout`。
 
 ## 宿主接入
 
@@ -81,7 +131,7 @@ internal sealed class ChannelServerRunner : IHostedService
 }
 ```
 
-- 不提供 `AddChannelServer<T>`；options 由调用方为每个 `ChannelServer` 单独创建。
+- 不提供泛型 `AddChannelServer<T>`；多服务器宿主托管使用 `AddChannelServer(definition)` + `AddChannelServerGroup()`，options 仍由调用方为每个定义单独创建。
 - runner 必须先于会立即连接服务器的 hosted service 注册，保证绑定先完成。
 - 每连接从传入的 `IServiceScopeFactory` 创建独立作用域，可在处理器中通过 `context.Services` 解析 Scoped 服务。
 - 宿主 `HostOptions.ShutdownTimeout` 应大于 `ChannelServerOptions.ShutdownTimeout`，否则宿主会先截断停机等待。
@@ -114,4 +164,4 @@ dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primiti
 
 ## 阶段
 
-P1.5a（本阶段）：组合式服务器入口，删除继承与泛型 DI 入口。多服务器托管、IoC 注册在 P1.5b；消息层、TLS、客户端、NamedPipe/Diagnostics 在后续阶段。
+P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b（本阶段）：`ChannelServerGroup` 与多服务器 IoC 注册。消息层、TLS、客户端、NamedPipe/Diagnostics 在后续阶段。

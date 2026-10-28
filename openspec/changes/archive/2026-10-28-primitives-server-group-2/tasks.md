@@ -13,7 +13,7 @@
 
 ## 1. 测试先行：双定义宿主启停
 
-- [ ] 1.1 写 `ServerGroupHostingTests` 双定义宿主启动测试
+- [x] 1.1 写 `ServerGroupHostingTests` 双定义宿主启动测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ServerGroupHostingTests.cs`
@@ -93,7 +93,7 @@ Expected: 编译失败，提示 `ChannelServerDefinition` 或 `AddChannelServerG
 
 ## 2. 实现定义、hosted service 与 DI 扩展
 
-- [ ] 2.1 创建 `ChannelServerDefinition`
+- [x] 2.1 创建 `ChannelServerDefinition`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerDefinition.cs`
@@ -135,7 +135,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.2 创建 `ChannelServerGroupHostedService`
+- [x] 2.2 创建 `ChannelServerGroupHostedService`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Hosting/ChannelServerGroupHostedService.cs`
@@ -167,7 +167,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.3 创建 `AddChannelServer` 与 `AddChannelServerGroup`
+- [x] 2.3 创建 `AddChannelServer` 与 `AddChannelServerGroup`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/DependencyInjection/ChannelServerGroupServiceCollectionExtensions.cs`
@@ -226,7 +226,7 @@ namespace Microsoft.Extensions.DependencyInjection
 }
 ```
 
-- [ ] 2.4 构建并跑首个宿主测试
+- [x] 2.4 构建并跑首个宿主测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -236,7 +236,7 @@ Expected: `Host_StartAsync_BindsBothDefinitions_AndStopsThem` 通过。
 
 ## 3. 补齐注册与失败语义测试
 
-- [ ] 3.1 增加注册顺序与独立 options 测试
+- [x] 3.1 增加注册顺序与独立 options 测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ServerGroupHostingTests.cs`
@@ -269,7 +269,7 @@ private static int GetFreePort()
 }
 ```
 
-- [ ] 3.2 增加缺少组注册与重复组注册测试
+- [x] 3.2 增加缺少组注册与重复组注册测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ServerGroupHostingTests.cs`
@@ -315,7 +315,7 @@ public async Task Host_DuplicateAddChannelServerGroup_RegistersOneHostedService(
 }
 ```
 
-- [ ] 3.3 增加 scope factory 传播测试
+- [x] 3.3 增加 scope factory 传播测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ServerGroupHostingTests.cs`
@@ -388,7 +388,7 @@ private sealed class GroupScopedProbe : IDisposable
 }
 ```
 
-- [ ] 3.4 增加启动失败清理测试
+- [x] 3.4 增加启动失败清理测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ServerGroupHostingTests.cs`
@@ -420,14 +420,14 @@ public async Task Host_StartupFailure_RollsBackPreviouslyStartedServers()
 }
 ```
 
-- [ ] 3.5 跑宿主测试全集
+- [x] 3.5 跑宿主测试全集
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~ServerGroupHostingTests`
 Expected: 全部 `ServerGroupHostingTests` 通过。
 
 ## 4. README 与最终验证
 
-- [ ] 4.1 更新 Primitives README 的多服务器宿主注册章节
+- [x] 4.1 更新 Primitives README 的多服务器宿主注册章节
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -460,7 +460,7 @@ Expected: 全部 `ServerGroupHostingTests` 通过。
     每个定义保留自己的 `ChannelServerOptions`，不存在全局 `ChannelServerOptions` 注册。
     每连接作用域来自容器的 `IServiceScopeFactory`；宿主 `ShutdownTimeout` 应大于最大的 server `ShutdownTimeout`。
 
-- [ ] 4.2 构建并跑全量测试
+- [x] 4.2 构建并跑全量测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -468,7 +468,7 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: 现有测试与新增 `ServerGroupHostingTests` 全部通过。
 
-- [ ] 4.3 校验 OpenSpec artifact
+- [x] 4.3 校验 OpenSpec artifact
 
 Run: `openspec validate "primitives-server-group-2" --strict --no-interactive`
 Expected: `Change 'primitives-server-group-2' is valid`。

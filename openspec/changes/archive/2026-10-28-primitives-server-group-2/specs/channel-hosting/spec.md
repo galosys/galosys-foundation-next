@@ -2,9 +2,7 @@
 
 ### Requirement: 多服务器注册
 
-The implementation SHALL provide a public sealed `ChannelServerDefinition` in the `Microsoft.Extensions.Hosting.Net` namespace with a non-empty `Name`, a `ChannelServerOptions` instance, and an `Action<IChannelPipeline>` pipeline configuration delegate. The constructor MUST reject a null or whitespace name, null options, and a null delegate, and MUST snapshot the options so later mutations of the caller's object do not change the definition. The implementation SHALL provide `IServiceCollection` extensions `AddChannelServer(ChannelServerDefinition)` and `AddChannelServerGroup()` in the `Microsoft.Extensions.DependencyInjection` namespace.
-
-`AddChannelServer` MUST append the definition as a singleton and MUST NOT register a global `ChannelServerOptions`. `AddChannelServerGroup` MUST register exactly one `ChannelServerGroup` built from all registered definitions using the container's `ILoggerFactory` and `IServiceScopeFactory`, and exactly one `ChannelServerGroupHostedService`. The registration order of definitions MUST be the start order of the group. Each definition MUST keep its own options, and every created `ChannelServer` MUST receive the shared scope factory. Calling `AddChannelServerGroup` more than once MUST be idempotent. Registering definitions without `AddChannelServerGroup` MUST leave them inert, with no listener started.
+`ChannelServerDefinition` MUST be public sealed in `Microsoft.Extensions.Hosting.Net` with a non-empty `Name`, snapshotted options, and a pipeline delegate, rejecting blank names, null options, and null delegates. `AddChannelServer` MUST append a singleton without global options. `AddChannelServerGroup` MUST idempotently register one group and one hosted service built from all definitions with the container's `ILoggerFactory` and `IServiceScopeFactory`.
 
 #### Scenario: 两个定义绑定独立端点
 
@@ -51,7 +49,7 @@ The implementation SHALL provide a public sealed `ChannelServerDefinition` in th
 
 ### Requirement: 宿主生命周期
 
-The implementation SHALL satisfy this requirement. `ChannelServer` MUST be hostable either by a caller-provided `IHostedService` runner or by `ChannelServerGroupHostedService` when `AddChannelServerGroup()` is used. The runner or hosted service `StartAsync` MUST return only after the underlying server or group has completed binding; a bind failure MUST make `IHost.StartAsync` throw and MUST NOT leave previously started servers listening. `StopAsync` MUST stop accepting new connections and wait for in-flight connections according to each server's `ChannelServerOptions.ShutdownTimeout`. `ChannelServerGroupHostedService.StopAsync` MUST pass `CancellationToken.None` to `ChannelServerGroup.StopAsync` so the host timeout does not truncate per-server shutdown. Container disposal MUST dispose the group and its servers without requiring the caller to stop them first.
+`ChannelServer` MUST be hostable by a caller-provided `IHostedService` runner or by `ChannelServerGroupHostedService` when `AddChannelServerGroup()` is used. Start MUST return only after binding; a bind failure MUST make `IHost.StartAsync` throw without leaving servers listening. Stop MUST wait for in-flight connections per each server's `ShutdownTimeout`, and the group hosted service MUST pass `CancellationToken.None`. Container disposal MUST dispose the group and its servers idempotently.
 
 #### Scenario: 宿主启动后即可连接
 

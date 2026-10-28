@@ -13,7 +13,7 @@
 
 ## 1. 测试先行：双服务器绑定
 
-- [ ] 1.1 写 `ChannelServerGroup` 双服务器绑定测试
+- [x] 1.1 写 `ChannelServerGroup` 双服务器绑定测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ChannelServerGroupTests.cs`
@@ -71,7 +71,7 @@ Expected: 编译失败，提示 `ChannelServerGroup` 不存在（这是本任务
 
 ## 2. 实现组类型
 
-- [ ] 2.1 创建 `ChannelServerGroup` 的构造与 `Servers`
+- [x] 2.1 创建 `ChannelServerGroup` 的构造与 `Servers`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerGroup.cs`
@@ -104,7 +104,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.2 实现 `StartAsync` 的顺序启动与回滚
+- [x] 2.2 实现 `StartAsync` 的顺序启动与回滚
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerGroup.cs`
@@ -149,7 +149,7 @@ public async Task StartAsync(CancellationToken ct)
 }
 ```
 
-- [ ] 2.3 实现 `StopAsync` 的并行停机与 `AggregateException`
+- [x] 2.3 实现 `StopAsync` 的并行停机与 `AggregateException`
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerGroup.cs`
@@ -183,7 +183,7 @@ private static async Task<Exception?> StopOneAsync(IChannelServer server, Cancel
 }
 ```
 
-- [ ] 2.4 实现幂等 `DisposeAsync` / `Dispose`
+- [x] 2.4 实现幂等 `DisposeAsync` / `Dispose`
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerGroup.cs`
@@ -237,7 +237,7 @@ public async ValueTask DisposeAsync()
 public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
 ```
 
-- [ ] 2.5 构建并跑首个组测试
+- [x] 2.5 构建并跑首个组测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -247,7 +247,7 @@ Expected: `StartAsync_StartsTwoServers_AndBindsIndependentEndPoints` 通过。
 
 ## 3. 补齐生命周期测试
 
-- [ ] 3.1 增加独立 options 与统一停机测试
+- [x] 3.1 增加独立 options 与统一停机测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelServerGroupTests.cs`
@@ -290,7 +290,7 @@ public async Task StartAsync_UsesIndependentOptions_AndStopAll_ClosesBoth()
 }
 ```
 
-- [ ] 3.2 增加第二个绑定失败的 rollback 测试
+- [x] 3.2 增加第二个绑定失败的 rollback 测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelServerGroupTests.cs`
@@ -324,7 +324,7 @@ public async Task StartAsync_SecondBindFails_StopsFirstAndRethrowsOriginal()
 
 需要在文件顶部补 `using System.Net.Sockets;`。
 
-- [ ] 3.3 增加释放幂等、空组与取消测试
+- [x] 3.3 增加释放幂等、空组与取消测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelServerGroupTests.cs`
@@ -375,14 +375,14 @@ public async Task StartAsync_CanceledToken_ThrowsAndLeavesServersUnbound()
 }
 ```
 
-- [ ] 3.4 跑组测试全集
+- [x] 3.4 跑组测试全集
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~ChannelServerGroupTests`
 Expected: 全部 `ChannelServerGroupTests` 通过。
 
 ## 4. README 与验证
 
-- [ ] 4.1 更新 Primitives README 的多服务器用法
+- [x] 4.1 更新 Primitives README 的多服务器用法
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -411,7 +411,7 @@ Expected: 全部 `ChannelServerGroupTests` 通过。
     组按构造顺序串行启动；某个 server 启动失败时，已启动的 server 会按相反顺序停止，并重新抛出原始异常。
     停机并行执行，所有失败汇总为 `AggregateException`；`DisposeAsync` 可重复调用。
 
-- [ ] 4.2 构建并跑全量测试
+- [x] 4.2 构建并跑全量测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -419,7 +419,7 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: 现有测试与新增 `ChannelServerGroupTests` 全部通过。
 
-- [ ] 4.3 校验 OpenSpec artifact
+- [x] 4.3 校验 OpenSpec artifact
 
 Run: `openspec validate "primitives-server-group-1" --strict --no-interactive`
 Expected: `Change 'primitives-server-group-1' is valid`。

@@ -29,7 +29,8 @@
   由程序集扫描发现，再手写 `AddSingleton`/`AddHostedService` 通常多余；`InternalModule` 只用于特性表达不了
   的注册（如 `AddCqrs()`、`AddStateMachine(...)`）。
 - **本地类库**：`Galosys.Foundation.Primitives`（TCP + `System.IO.Pipelines` 服务端基架，核心类型用
-  `Microsoft.Extensions.Hosting.Net`，Options 类型用 `Microsoft.Extensions.Options`）、
+  `Microsoft.Extensions.Hosting.Net`，Options 类型用 `Microsoft.Extensions.Options`；多服务器组合用
+  `ChannelServerGroup`，宿主注册用 `AddChannelServer(definition)` + `AddChannelServerGroup()`）、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
   `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）。
 - `samples/MafSample.ConsoleApp/Microsoft/Extensions/Hosting/WindowedBatchWorker.cs` 是本地辅助类，不是包里的类型。
