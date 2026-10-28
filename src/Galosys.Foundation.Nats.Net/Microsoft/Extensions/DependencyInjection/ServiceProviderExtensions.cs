@@ -5,8 +5,11 @@ using Microsoft.Extensions.Messaging;
 using Microsoft.Extensions.Options;
 using NATS.Client.Core;
 using NATS.Net;
+using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -81,14 +84,15 @@ namespace Microsoft.Extensions.DependencyInjection
                         {
                             ConcurrentRunner.CreateTaskRunner(1).Start(async ct =>
                             {
-                                await foreach (var msg in template.SubscribeAsync<string>("sample.greet", queueGroup: "nats-sample-console-app", cancellationToken: cts.Token))
+                                await foreach (var msg in template.SubscribeAsync<string>("sample.greet", queueGroup: "nats-sample-console-app"))
                                 {
                                     using (var innerScope = root.CreateScope())
                                     {
                                         var innerSp = innerScope.ServiceProvider;
                                         var instance = innerSp.GetRequiredService(mi.DeclaringType) as IMessageHandler;
-                                        var rt = await instance.HandleAsync(msg.Data);
-                                        return rt;
+                                        //var rt = await instance.HandleAsync(msg.Data);
+                                        //return rt;
+                                        await Task.CompletedTask;
                                     }
                                 }
                             });

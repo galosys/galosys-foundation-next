@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+	<PropertyGroup>
+		<UserSecretsId>dotnet-DTFx.ConsoleApp-54f9c6c2-2f54-4d8f-9fb8-383c98526e68</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="microsoft.azure.durabletask.emulator"  />
+		<PackageReference Include="microsoft.durabletask.sqlserver" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Galosys.Foundation.Azure.DurableTask.Core\Galosys.Foundation.Azure.DurableTask.Core.csproj" />
+	</ItemGroup>
+</Project>

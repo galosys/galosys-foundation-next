@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NetServer.ConsoleApp
 {

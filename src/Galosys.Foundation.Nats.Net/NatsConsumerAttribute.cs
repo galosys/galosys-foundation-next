@@ -1,4 +1,6 @@
-﻿namespace NATS.Net
+﻿using System;
+
+namespace NATS.Net
 {
     public class NatsConsumerAttribute : Attribute
     {
