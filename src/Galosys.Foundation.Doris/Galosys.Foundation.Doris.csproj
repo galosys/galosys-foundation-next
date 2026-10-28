@@ -1,13 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="microsoft.extensions.http" Version="10.0.13" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="microsoft.extensions.http"  />
+	</ItemGroup>
 
 </Project>

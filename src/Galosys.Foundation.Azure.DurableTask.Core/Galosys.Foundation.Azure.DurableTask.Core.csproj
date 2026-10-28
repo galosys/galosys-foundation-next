@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<PackageReference Include="microsoft.azure.durabletask.core"/>
+	</ItemGroup>
+</Project>

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Microsoft.Extensions.Hosting.Net
 {
     internal sealed class ChannelPipeline : IChannelPipeline
