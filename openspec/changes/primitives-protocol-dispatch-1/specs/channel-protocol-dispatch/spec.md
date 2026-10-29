@@ -2,13 +2,17 @@
 
 ### Requirement: 协议契约
 
-The implementation SHALL provide public interfaces `IChannelProtocol` and `IChannelProtocolSelector` in the `Microsoft.Extensions.Hosting.Net` namespace. `IChannelProtocol` MUST expose a non-empty `Name` and a `HandleAsync(ChannelContext context, CancellationToken cancellationToken)` method returning `ValueTask`. `IChannelProtocolSelector` MUST expose `SelectAsync(ChannelContext context, CancellationToken cancellationToken)` returning `ValueTask<IChannelProtocol?>`; a null result MUST mean that no protocol matched. Neither interface may own, dispose, or complete the connection transport.
+The implementation SHALL provide public interfaces `IChannelProtocol` and `IChannelProtocolSelector` in the `Microsoft.Extensions.Hosting.Net` namespace. `IChannelProtocol` MUST expose a non-empty `Name` and a `HandleAsync(ChannelContext, CancellationToken)` method returning `ValueTask`. `IChannelProtocolSelector` MUST expose `SelectAsync(ChannelContext, CancellationToken)` returning `ValueTask<IChannelProtocol?>`.
 
 #### Scenario: 协议实现可被选择
 
 - **WHEN** 一个实现 `IChannelProtocol` 的类型返回非空 `Name`，并实现 `HandleAsync`
 - **THEN** 选择器可以返回该实例
 - **AND** 分发器可以调用其 `HandleAsync`
+
+### Requirement: 选择结果与连接所有权
+
+A null result from `IChannelProtocolSelector.SelectAsync` MUST mean that no protocol matched. `IChannelProtocol` and `IChannelProtocolSelector` MUST NOT own, dispose, or complete the connection transport.
 
 #### Scenario: 选择器返回 null 表示无匹配
 
@@ -61,7 +65,7 @@ The implementation SHALL provide a public sealed `ProtocolDispatcher` whose `Han
 
 ### Requirement: 失败与中止语义
 
-When the selector returns null or throws an exception, `ProtocolDispatcher` MUST abort the connection with an `InvalidDataException` by calling `ChannelContext.Abort`. A selector exception MUST be preserved as the `InnerException` of the `InvalidDataException` unless it is already an `InvalidDataException`, in which case it MAY be reused. The dispatcher MUST NOT rethrow selector failures to the caller. Exceptions thrown by the selected protocol MUST NOT be caught or converted by the dispatcher; they MUST propagate to the server's normal handler-error path. Cancellation caused by `ConnectionClosed` MUST NOT produce an `InvalidDataException`.
+When the selector returns null or throws an exception, `ProtocolDispatcher` MUST abort the connection with an `InvalidDataException` by calling `ChannelContext.Abort`, and MUST NOT rethrow selector failures to the caller. A selector exception MUST be preserved as the `InnerException` of the `InvalidDataException` unless it is already an `InvalidDataException`, in which case it MAY be reused.
 
 #### Scenario: 无匹配协议中止连接
 
@@ -83,11 +87,19 @@ When the selector returns null or throws an exception, `ProtocolDispatcher` MUST
 - **THEN** `context.AbortReason` 是同一个 `InvalidDataException` 实例
 - **AND** 不会出现 `InvalidDataException` 嵌套自身
 
+### Requirement: 取消不是协议错误
+
+Cancellation caused by `ConnectionClosed` MUST NOT produce an `InvalidDataException`.
+
 #### Scenario: 连接关闭导致的取消不产生协议错误
 
 - **WHEN** `ConnectionClosed` 已取消，选择器抛出 `OperationCanceledException`
 - **THEN** 分发器返回，不调用 `Abort`
 - **AND** `context.AbortReason` 保持 null
+
+### Requirement: 协议异常传播
+
+Exceptions thrown by the selected protocol MUST NOT be caught or converted by the dispatcher; they MUST propagate to the server's normal handler-error path.
 
 #### Scenario: 协议异常向上传播
 
