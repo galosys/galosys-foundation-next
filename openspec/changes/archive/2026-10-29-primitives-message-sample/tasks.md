@@ -14,7 +14,7 @@
 
 ## 1. 回归测试
 
-- [ ] 4.1 增加多字节 UTF-8 跨写入回归测试
+- [x] 4.1 增加多字节 UTF-8 跨写入回归测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -51,7 +51,7 @@ Expected: 测试通过，说明相同的 `LineFramer` + `Utf8StringCodec` 组合
 
 ## 2. 迁移示例
 
-- [ ] 4.2 把 `SampleChannelHandler` 改为行文本会话
+- [x] 4.2 把 `SampleChannelHandler` 改为行文本会话
 
 **Files:**
 - Modify: `samples/NetServer.ConsoleApp/SampleChannelHandler.cs`
@@ -86,7 +86,7 @@ public async Task HandleAsync(ChannelContext context)
 
 保留构造函数、`ILogger<SampleChannelHandler>` 和命名空间不变；删除原来的 `context.Reader.ReadAsync` 循环与 `Encoding.UTF8.GetString`。
 
-- [ ] 4.3 让 `SenderBootstrapper` 发送带换行的 hello
+- [x] 4.3 让 `SenderBootstrapper` 发送带换行的 hello
 
 **Files:**
 - Modify: `samples/NetServer.ConsoleApp/SenderBootstrapper.cs`
@@ -105,14 +105,14 @@ var bytes = Encoding.UTF8.GetBytes("hello\n");
 
 其余连接、每秒发送和取消逻辑不变。
 
-- [ ] 4.4 构建示例
+- [x] 4.4 构建示例
 
 Run: `dotnet build samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
 Expected: 0 errors；允许既有 `CS9113` 警告。
 
 ## 3. 运行验证
 
-- [ ] 4.5 启动示例并验证每秒 hello
+- [x] 4.5 启动示例并验证每秒 hello
 
 Run: `dotnet run --project samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
 Expected:
@@ -120,7 +120,7 @@ Expected:
 - 每秒输出一条 `>>>>> hello <<<<<`；
 - 按 Ctrl+C 后进程退出，无未处理异常。
 
-- [ ] 4.6 手工验证多字节 UTF-8 不被截断
+- [x] 4.6 手工验证多字节 UTF-8 不被截断
 
 保持 4.5 的示例运行，另开一个 PowerShell 终端执行：
 
@@ -141,7 +141,7 @@ Expected: 示例终端出现 `>>>>> 你好 <<<<<`，且不出现 `�`。由于 
 
 ## 4. 文档
 
-- [ ] 4.7 更新 Primitives README 的示例与会话约束
+- [x] 4.7 更新 Primitives README 的示例与会话约束
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -187,7 +187,7 @@ public async Task HandleAsync(ChannelContext context)
 - 多字节 UTF-8 只在完整帧上解码，不会跨 `ReadAsync` 截断。
 ```
 
-- [ ] 4.8 更新 sample README
+- [x] 4.8 更新 sample README
 
 **Files:**
 - Modify: `samples/NetServer.ConsoleApp/README.md`
@@ -259,7 +259,7 @@ $client.Close()
 
 ## 5. 最终验证
 
-- [ ] 4.9 全量构建与测试
+- [x] 4.9 全量构建与测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -270,7 +270,15 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: 现有测试 + `FramingTests` + `MessageCodecTests` + `SessionTests` 全部通过。
 
-- [ ] 4.10 校验 OpenSpec artifact
+- [x] 4.10 校验 OpenSpec artifact
 
 Run: `openspec validate "primitives-message-sample" --strict --no-interactive`
 Expected: `Change 'primitives-message-sample' is valid`。
+
+---
+
+## 实施记录
+
+- 4.1–4.10 全部完成：新增多字节 UTF-8 跨写入回归测试（147/147 全量通过）；`SampleChannelHandler` 改用 `AsLineTextSession`；`SenderBootstrapper` 发送 `hello\n`；Primitives README 与 sample README 已更新。
+- 运行验证：示例监听 8000，每秒输出 `>>>>> hello <<<<<`；分两次写入 `"你好\n"` 后日志出现 `>>>>> 你好 <<<<<`（日志文件字节 `c4 e3 ba c3` 为 GBK 编码的“你好”），无替换字符。
+- 构建：Primitives 0 错误；`NetServer.ConsoleApp` 0 错误（CS1591 为项目既有警告）。

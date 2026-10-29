@@ -25,6 +25,116 @@
 
 客户端只关闭发送方向的半关闭（FIN）不会触发该令牌；处理器应通过 `Reader` 的 `IsCompleted`/读取结束来观察半关闭，并仍可继续写入响应。
 
+## 消息分帧
+
+`IMessageFramer` 只负责“消息到哪结束”，不负责 payload ↔ T。首批提供：
+
+| Framer | 边界 | 说明 |
+|---|---|---|
+| `LengthPrefixedFramer` | 4 字节大端长度 + payload | 默认 `MaxFrameSize` 1 MiB，零长度帧合法 |
+| `LineFramer` | `\n`（可裁剪 `\r`） | 纯字节分隔符，UTF-8 解码交给 codec |
+| `PassThroughFramer` | 当前非空 buffer | 兼容原始字节；不保证多次写入不被合并 |
+
+```csharp
+var framer = new LengthPrefixedFramer(
+    new LengthFieldFramerOptions { MaxFrameSize = 1024 * 1024 });
+
+var result = framer.Parse(buffer);
+if (result.IsComplete)
+{
+    // 必须在 Frame 被消费前完成解码或拷贝。
+    var payload = result.Frame;
+    reader.AdvanceTo(result.Consumed, result.Examined);
+}
+```
+
+帧不完整时 `Consumed == buffer.Start`、`Examined == buffer.End`；完整帧只消费一帧；
+非法长度或超限抛 `InvalidDataException`，由 session 中止连接。
+
+## 消息编解码
+
+`IMessageCodec<T>` 只处理一帧 payload，不处理长度头、分隔符、半包或粘包。
+
+| Codec | T | 说明 |
+|---|---|---|
+| `JsonMessageCodec<T>` | `T` | `Utf8JsonReader`/`Utf8JsonWriter`，支持多段序列；空帧、`null`、无效 JSON、尾随内容抛 `JsonException` |
+| `Utf8StringCodec` | `string` | 严格 UTF-8；空帧抛 `InvalidDataException`，非法字节抛 `DecoderFallbackException` |
+| `RawMessageCodec` | `ReadOnlyMemory<byte>` | `Decode` 返回独立拷贝，可在 `AdvanceTo` 后继续使用 |
+
+```csharp
+IMessageCodec<MyMessage> codec = new JsonMessageCodec<MyMessage>();
+
+// frame 来自 IMessageFramer.Parse；必须在 AdvanceTo 之前完成 Decode。
+var message = codec.Decode(frame);
+
+var writer = new ArrayBufferWriter<byte>();
+codec.Encode(writer, message);
+```
+
+`ReadOnlySequence<byte>` 只在 `AdvanceTo` 之前有效；需要长期持有 payload 时使用
+`RawMessageCodec` 或自行拷贝。
+
+## 消息会话
+
+`IChannelSession<T>` 是每连接一个的拉模型会话；只在终端 handler 创建，不放在
+`IChannelPipeline.Use` 中间件里。
+
+```csharp
+static async Task HandleAsync(ChannelContext context)
+{
+    await using var session = context.AsLineTextSession();
+
+    while (true)
+    {
+        string line;
+        try
+        {
+            line = await session.ReadAsync(context.ConnectionClosed);
+        }
+        catch (EndOfStreamException)
+        {
+            break;
+        }
+
+        await session.WriteAsync(line, context.ConnectionClosed);
+    }
+}
+```
+
+示例 `NetServer.ConsoleApp` 只在终端 handler 创建行文本会话：
+
+```csharp
+public async Task HandleAsync(ChannelContext context)
+{
+    await using var session = context.AsLineTextSession();
+
+    while (true)
+    {
+        string line;
+        try
+        {
+            line = await session.ReadAsync(context.ConnectionClosed);
+        }
+        catch (EndOfStreamException)
+        {
+            break;
+        }
+
+        _logger.LogInformation(">>>>> {Line} <<<<<", line);
+    }
+}
+```
+
+不要在 `IChannelPipeline.Use` 中间件里创建 session：中间件只包装 `Transport`，
+读取业务数据会破坏管线契约。
+
+- 一个连接只能创建一个 session；第二次 `AsSession`/`AsLineTextSession` 抛 `InvalidOperationException`。
+- `DisposeAsync` 只释放 session 自己，不关闭连接；连接由 `ChannelServer` 收尾。
+- `ReadAsync` 并发调用直接抛错；读取消不会消费缓冲区，下一次可以继续。
+- `WriteAsync` 用信号量串行化；写取消可能已写出半个帧，会中止连接。
+- `MessageChannelOptions.MaxMessageSize` 默认 1 MiB。
+- `AsJsonSession<T>()` = 长度前缀 + JSON；`AsLineTextSession()` = 换行 + UTF-8。
+
 ## 最小用法
 
 ```csharp
@@ -147,6 +257,9 @@ internal sealed class ChannelServerRunner : IHostedService
 
 ## 约束
 
+- 一个连接一个 session；session 只在终端 handler 创建。
+- 行文本示例的线格式是 `hello\n`；`Utf8StringCodec` 拒绝空行。
+- 多字节 UTF-8 只在完整帧上解码，不会跨 `ReadAsync` 截断。
 - 处理器不得 `Complete` 或释放 `Transport`，收尾由框架完成。
 - 中间件只能包装 `Transport`，不得读取业务字节。
 - 一个连接只有一个 Reader 消费者、一个 Writer 生产者。

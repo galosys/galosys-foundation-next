@@ -19,6 +19,7 @@ namespace Microsoft.Extensions.Hosting.Net
         private int _closedNotified;
         private int _beginClosed;
         private int _connectionDisposed;
+        private object? _session;
 
         internal ChannelContext(string connectionId, IChannelConnection connection, IServiceProvider services)
         {
@@ -61,6 +62,11 @@ namespace Microsoft.Extensions.Hosting.Net
         public Exception? AbortReason => Volatile.Read(ref _abortReason);
 
         internal bool IsAborted => Volatile.Read(ref _aborted) != 0;
+
+        internal bool TrySetSession(object session)
+            => Interlocked.CompareExchange(ref _session, session, null) is null;
+
+        internal object? Session => Volatile.Read(ref _session);
 
         /// <summary>
         /// 替换当前连接的传输。仅允许管线中间件在调用 <c>next</c> 前使用；

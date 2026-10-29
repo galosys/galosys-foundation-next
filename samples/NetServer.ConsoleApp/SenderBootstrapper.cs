@@ -10,7 +10,7 @@ namespace NetServer.ConsoleApp
             using var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             await client.ConnectAsync("127.0.0.1", 8000, stoppingToken);
 
-            var bytes = Encoding.UTF8.GetBytes("hello");
+            var bytes = Encoding.UTF8.GetBytes("hello\n");
 
             while (!stoppingToken.IsCancellationRequested)
             {

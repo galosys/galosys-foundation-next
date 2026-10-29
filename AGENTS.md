@@ -30,7 +30,9 @@
   的注册（如 `AddCqrs()`、`AddStateMachine(...)`）。
 - **本地类库**：`Galosys.Foundation.Primitives`（TCP + `System.IO.Pipelines` 服务端基架，核心类型用
   `Microsoft.Extensions.Hosting.Net`，Options 类型用 `Microsoft.Extensions.Options`；多服务器组合用
-  `ChannelServerGroup`，宿主注册用 `AddChannelServer(definition)` + `AddChannelServerGroup()`）、
+  `ChannelServerGroup`，宿主注册用 `AddChannelServer(definition)` + `AddChannelServerGroup()`；
+  消息层用 `Framing/` 的 `IMessageFramer`、`Codecs/` 的 `IMessageCodec<T>` 和 `Session/` 的
+  `IChannelSession<T>`（`AsLineTextSession`/`AsJsonSession` 组合入口））、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
   `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）。
 - `samples/MafSample.ConsoleApp/Microsoft/Extensions/Hosting/WindowedBatchWorker.cs` 是本地辅助类，不是包里的类型。
