@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Logging;
 
@@ -15,23 +14,25 @@ namespace NetServer.ConsoleApp
 
         public async Task HandleAsync(ChannelContext context)
         {
-            var reader = context.Reader;
+            await using var session = context.AsLineTextSession();
 
             while (true)
             {
-                var rt = await reader.ReadAsync();
-                var buffer = rt.Buffer;
-
-                if (!buffer.IsEmpty)
+                string line;
+                try
                 {
-                    var str = Encoding.UTF8.GetString(buffer);
-                    _logger.LogInformation(">>>>> {str} <<<<<", str);
+                    line = await session.ReadAsync(context.ConnectionClosed);
+                }
+                catch (EndOfStreamException)
+                {
+                    break;
+                }
+                catch (OperationCanceledException) when (context.ConnectionClosed.IsCancellationRequested)
+                {
+                    break;
                 }
 
-                reader.AdvanceTo(buffer.End);
-
-                if (rt.IsCompleted || rt.IsCanceled)
-                    break;
+                _logger.LogInformation(">>>>> {Line} <<<<<", line);
             }
         }
     }

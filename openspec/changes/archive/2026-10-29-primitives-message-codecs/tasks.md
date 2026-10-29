@@ -13,7 +13,7 @@
 
 ## 1. 契约与测试先行
 
-- [ ] 2.1 写 JSON 往返的失败测试
+- [x] 2.1 写 JSON 往返的失败测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/MessageCodecTests.cs`
@@ -47,7 +47,7 @@ public sealed class MessageCodecTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~MessageCodecTests`
 Expected: 编译失败，提示 `IMessageCodec<T>` / `JsonMessageCodec<T>` 不存在。
 
-- [ ] 2.2 新增 `IMessageCodec<T>`
+- [x] 2.2 新增 `IMessageCodec<T>`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Codecs/IMessageCodec.cs`
@@ -69,7 +69,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.3 实现 `JsonMessageCodec<T>.Decode`
+- [x] 2.3 实现 `JsonMessageCodec<T>.Decode`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Codecs/JsonMessageCodec.cs`
@@ -127,7 +127,7 @@ namespace Microsoft.Extensions.Hosting.Net
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 编译失败，`JsonMessageCodec<T>` 未实现 `Encode`（这是预期的中间状态）。
 
-- [ ] 2.4 实现 `JsonMessageCodec<T>.Encode`
+- [x] 2.4 实现 `JsonMessageCodec<T>.Encode`
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Codecs/JsonMessageCodec.cs`
@@ -154,7 +154,7 @@ public void Encode(IBufferWriter<byte> writer, T message)
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~MessageCodecTests`
 Expected: `Json_RoundTrip` 通过。
 
-- [ ] 2.5 补齐 JSON 错误测试
+- [x] 2.5 补齐 JSON 错误测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/MessageCodecTests.cs`
@@ -205,7 +205,7 @@ public void Json_EncodeNull_ThrowsArgumentNullException()
 }
 ```
 
-- [ ] 2.6 实现 `Utf8StringCodec`
+- [x] 2.6 实现 `Utf8StringCodec`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Codecs/Utf8StringCodec.cs`
@@ -248,7 +248,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.7 补齐 UTF-8 测试
+- [x] 2.7 补齐 UTF-8 测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/MessageCodecTests.cs`
@@ -302,7 +302,7 @@ public void Utf8_Encode_DoesNotAppendDelimiter()
 }
 ```
 
-- [ ] 2.8 实现 `RawMessageCodec`
+- [x] 2.8 实现 `RawMessageCodec`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Codecs/RawMessageCodec.cs`
@@ -329,7 +329,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.9 补齐 Raw 测试
+- [x] 2.9 补齐 Raw 测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/MessageCodecTests.cs`
@@ -367,7 +367,7 @@ public void Raw_Empty_ReturnsEmptyMemory()
 }
 ```
 
-- [ ] 2.10 补多段 JSON 与选项快照测试
+- [x] 2.10 补多段 JSON 与选项快照测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/MessageCodecTests.cs`
@@ -401,12 +401,12 @@ public void Json_OptionsAreSnapshotted()
 }
 ```
 
-- [ ] 2.11 运行 focused codec 测试
+- [x] 2.11 运行 focused codec 测试
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~MessageCodecTests`
 Expected: 全部 `MessageCodecTests` 通过。
 
-- [ ] 2.12 更新 Primitives README 的编解码章节
+- [x] 2.12 更新 Primitives README 的编解码章节
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -438,7 +438,7 @@ codec.Encode(writer, message);
 `RawMessageCodec` 或自行拷贝。
 ````
 
-- [ ] 2.13 全量构建、测试与 OpenSpec 校验
+- [x] 2.13 全量构建、测试与 OpenSpec 校验
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -448,3 +448,11 @@ Expected: 现有测试 + `FramingTests` + `MessageCodecTests` 全部通过。
 
 Run: `openspec validate "primitives-message-codecs" --strict --no-interactive`
 Expected: `Change 'primitives-message-codecs' is valid`。
+
+---
+
+## 实施记录
+
+- 2.1–2.13 全部完成：新增 `Codecs/` 下 4 个文件、`MessageCodecTests.cs`（16 个测试）和 README 编解码章节。
+- `Json_TrailingContent_ThrowsJsonException` 改用 `Assert.ThrowsAny<JsonException>`：`Utf8JsonReader` 默认 `AllowMultipleValues = false` 时抛 `JsonReaderException`（`JsonException` 子类），规格只要求 `JsonException`。
+- 验证：Primitives 构建 0 错误；focused `MessageCodecTests` 16/16 通过；全量测试 135/135 通过。

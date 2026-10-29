@@ -13,7 +13,7 @@
 
 ## 1. 契约与测试先行
 
-- [ ] 3.1 写半包重组的失败测试
+- [x] 3.1 写半包重组的失败测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -73,7 +73,7 @@ public sealed class SessionTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~SessionTests`
 Expected: 编译失败，提示 `IChannelSession<T>` / `AsLineTextSession` 不存在。
 
-- [ ] 3.2 新增 `IChannelSession<T>`
+- [x] 3.2 新增 `IChannelSession<T>`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Session/IChannelSession.cs`
@@ -93,7 +93,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 3.3 新增 `MessageChannelOptions` 与 `ChannelContext` 槽位
+- [x] 3.3 新增 `MessageChannelOptions` 与 `ChannelContext` 槽位
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/MessageChannelOptions.cs`
@@ -133,7 +133,7 @@ internal object? Session => Volatile.Read(ref _session);
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
 
-- [ ] 3.4 新增池化 `PooledBufferWriter`
+- [x] 3.4 新增池化 `PooledBufferWriter`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Session/PooledBufferWriter.cs`
@@ -200,7 +200,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 3.5 实现 `ChannelSession<T>` 的构造与释放
+- [x] 3.5 实现 `ChannelSession<T>` 的构造与释放
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Session/ChannelSession.cs`
@@ -267,7 +267,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 3.6 实现 `ChannelSession<T>.ReadAsync`
+- [x] 3.6 实现 `ChannelSession<T>.ReadAsync`
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Session/ChannelSession.cs`
@@ -346,7 +346,7 @@ public async ValueTask<T> ReadAsync(CancellationToken ct)
 }
 ```
 
-- [ ] 3.7 实现 `ChannelSession<T>.WriteAsync`
+- [x] 3.7 实现 `ChannelSession<T>.WriteAsync`
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Session/ChannelSession.cs`
@@ -405,7 +405,7 @@ public async ValueTask WriteAsync(T message, CancellationToken ct)
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
 
-- [ ] 3.8 新增会话扩展方法
+- [x] 3.8 新增会话扩展方法
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Session/ChannelContextSessionExtensions.cs`
@@ -463,7 +463,7 @@ Expected: 0 errors；`SessionTests` 可以编译。
 
 ## 2. 行为测试
 
-- [ ] 3.9 补半包、粘包与一行多帧测试
+- [x] 3.9 补半包、粘包与一行多帧测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -507,7 +507,7 @@ public async Task LineSession_StickyPackets_AreSplitIntoMessages()
 }
 ```
 
-- [ ] 3.10 补干净 EOF 与帧中途 EOF 测试
+- [x] 3.10 补干净 EOF 与帧中途 EOF 测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -588,7 +588,7 @@ public async Task LineSession_ExceedsMaxMessageSize_ThrowsInvalidData()
 }
 ```
 
-- [ ] 3.11 补读取消与并发读测试
+- [x] 3.11 补读取消与并发读测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -667,7 +667,7 @@ public async Task LineSession_ConcurrentRead_Throws()
 }
 ```
 
-- [ ] 3.12 补并发写、1 MiB 背压与写上限测试
+- [x] 3.12 补并发写、1 MiB 背压与写上限测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -705,7 +705,7 @@ public async Task LineSession_OneMiB_Backpressure()
 }
 ```
 
-- [ ] 3.13 补重复 `AsSession` 与 Dispose 所有权测试
+- [x] 3.13 补重复 `AsSession` 与 Dispose 所有权测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -748,7 +748,7 @@ public async Task DuplicateAsSession_Throws_AndDisposeDoesNotCloseConnection()
 }
 ```
 
-- [ ] 3.14 补 JSON 会话往返测试
+- [x] 3.14 补 JSON 会话往返测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/SessionTests.cs`
@@ -803,12 +803,12 @@ public async Task JsonSession_RoundTrip()
 
 文件顶部需要 `using System.Buffers.Binary;`、`using System.Text.Json;`。
 
-- [ ] 3.15 运行 focused session 测试
+- [x] 3.15 运行 focused session 测试
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~SessionTests`
 Expected: 全部 `SessionTests` 通过。
 
-- [ ] 3.16 更新 Primitives README 的会话章节
+- [x] 3.16 更新 Primitives README 的会话章节
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -851,7 +851,7 @@ static async Task HandleAsync(ChannelContext context)
 - `AsJsonSession<T>()` = 长度前缀 + JSON；`AsLineTextSession()` = 换行 + UTF-8。
 ````
 
-- [ ] 3.17 全量构建、测试与 OpenSpec 校验
+- [x] 3.17 全量构建、测试与 OpenSpec 校验
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -861,3 +861,11 @@ Expected: 现有测试 + `FramingTests` + `MessageCodecTests` + `SessionTests` �
 
 Run: `openspec validate "primitives-message-session" --strict --no-interactive`
 Expected: `Change 'primitives-message-session' is valid`。
+
+---
+
+## 实施记录
+
+- 3.1–3.17 全部完成：新增 `Session/` 下 4 个文件、`MessageChannelOptions`，`ChannelContext` 增加 internal session 槽位，`SessionTests.cs` 11 个 loopback 测试，README 增加会话章节。
+- 验证：Primitives 构建 0 错误；focused `SessionTests` 11/11 通过；全量测试 146/146 通过（含 1 MiB 背压用例）。
+- 公开面只有 `IChannelSession<T>`、`ChannelContextSessionExtensions`、`MessageChannelOptions`；`ChannelSession<T>` 与 `PooledBufferWriter` 保持 internal。
