@@ -26,6 +26,8 @@ namespace Microsoft.Extensions.Hosting.Net
         private readonly CancellationTokenSource _abortCts = new();
         private readonly TaskCompletionSource<Exception?> _termination =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _completion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly Task _receiveLoop;
         private readonly Task _sendLoop;
         private readonly TaskCompletionSource _disposeCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -70,10 +72,14 @@ namespace Microsoft.Extensions.Hosting.Net
 
         public Task<Exception?> Termination => _termination.Task;
 
+        public Task Completion => _completion.Task;
+
         private bool IsAborted => Volatile.Read(ref _aborted) != 0;
 
         public void Abort(Exception? reason)
         {
+            SignalCompletion();
+
             if (Interlocked.Exchange(ref _aborted, 1) != 0)
             {
                 if (reason is not null)
@@ -190,6 +196,7 @@ namespace Microsoft.Extensions.Hosting.Net
             finally
             {
                 _disposeCompleted.TrySetResult();
+                SignalCompletion();
             }
         }
 
@@ -330,6 +337,7 @@ namespace Microsoft.Extensions.Hosting.Net
                     SignalTermination(error);
 
                 CompleteInputWriter(error);
+                SignalCompletion();
             }
         }
 
@@ -397,6 +405,8 @@ namespace Microsoft.Extensions.Hosting.Net
 
         private void SignalTermination(Exception? error)
             => _termination.TrySetResult(error);
+
+        private void SignalCompletion() => _completion.TrySetResult();
 
         private IOException CreateAbortException()
             => _abortReason is null

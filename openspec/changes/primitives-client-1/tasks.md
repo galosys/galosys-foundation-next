@@ -13,7 +13,7 @@
 
 ## 1. 契约、状态与配置
 
-- [ ] 1.1 写 `ChannelClientOptions` 失败测试
+- [x] 1.1 写 `ChannelClientOptions` 失败测试 — 已实现并测试通过。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ChannelClientOptionsTests.cs`
@@ -67,7 +67,7 @@ public sealed class ChannelClientOptionsTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientOptionsTests"`
 Expected: 编译失败，提示 `ChannelClientOptions` 不存在（这是本任务的“红”）。
 
-- [ ] 1.2 新增 `ChannelClientOptions`
+- [x] 1.2 新增 `ChannelClientOptions` — 已实现并测试通过。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelClientOptions.cs`
@@ -146,7 +146,7 @@ namespace Microsoft.Extensions.Options
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientOptionsTests"`
 Expected: 三个测试通过。
 
-- [ ] 1.3 新增状态、事件、失败分类与 `IChannelClient` 契约
+- [x] 1.3 新增状态、事件、失败分类与 `IChannelClient` 契约 — 已实现并构建通过。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelConnectionState.cs`
@@ -302,7 +302,7 @@ namespace Microsoft.Extensions.Hosting.Net
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
 
-- [ ] 1.4 给 internal 连接增加 `Completion` 并补传输测试
+- [x] 1.4 给 internal 连接增加 `Completion` 并补传输测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/IChannelConnection.cs`
