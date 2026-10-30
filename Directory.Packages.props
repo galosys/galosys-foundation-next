@@ -1,57 +1,61 @@
 <Project>
-  <PropertyGroup>
-    <MainVersion>25.10.20.1</MainVersion>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
-    <PackageVersion Include="microsoft.azure.durabletask.core" Version="3.11.2" />
-    <PackageVersion Include="microsoft.azure.durabletask.emulator" Version="2.6.0" />
-    <PackageVersion Include="microsoft.durabletask.sqlserver" Version="1.8.1" />
-    <PackageVersion Include="microsoft.extensions.dependencyinjection" Version="10.0.14" />
-    <PackageVersion Include="nats.net" Version="3.3.1" />
-    <PackageVersion Include="microsoft.extensions.http" Version="10.0.13" />
-    <PackageVersion Include="microsoft.extensions.dependencyinjection.abstractions" Version="10.0.13" />
-    <PackageVersion Include="microsoft.extensions.hosting.abstractions" Version="10.0.12" />
-    <PackageVersion Include="microsoft.extensions.logging.abstractions" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
-    <PackageVersion Include="galosys.foundation.wpf" Version="26.8.29.1" />
-    <PackageVersion Include="galosys.foundation.wpf.controls" Version="26.8.29.1" />
-    <PackageVersion Include="galosys.foundation.wpf.pro" Version="26.8.29.1" />
-    <PackageVersion Include="MudBlazor" Version="9.11.0" />
-    <PackageVersion Include="system.interactive.async" Version="7.0.1" />
-    <PackageVersion Include="System.Reactive" Version="7.0.0" />
-    <!--<PackageVersion Include="system.reactive.linq" Version="6.1.0" />-->
-    <PackageVersion Include="galosys.foundation.core" Version="26.10.20.1" />
-    <!--<PackageVersion Include="galosys.foundation.actuator.entityframeworkcore" Version="26.10.20.1" />-->
-    <!--<PackageVersion Include="galosys.foundation.alibabacloud.sdk.dingtalk" Version="26.10.20.1" />-->
-    <!--<PackageVersion Include="galosys.foundation.aspnetcore.dataprotection.freeredis" Version="26.10.20.1" />-->
-    <PackageVersion Include="galosys.foundation.aspnetcore.dynamicapi" Version="26.10.20.1" />
-    <PackageVersion Include="galosys.foundation.aspnetcore.securityheaders" Version="26.10.20.1" />
-    <PackageVersion Include="galosys.foundation.compliance" Version="26.10.20.1" />
-    <PackageVersion Include="galosys.foundation.core" Version="26.10.20.1" />
-    <PackageVersion Include="galosys.foundation.dapper" Version="26.10.20.1" />
-    <!--<PackageVersion Include="galosys.foundation.duckdb" Version="26.10.20.1" />-->
-    <PackageVersion Include="galosys.foundation.entityframeworkcore" Version="26.10.20.1" />
-    <PackageVersion Include="galosys.foundation.freeredis" Version="26.10.20.1" />
-    <!--<PackageVersion Include="galosys.foundation.notification" Version="26.10.20.1" />-->
-    <!--<PackageVersion Include="galosys.foundation.opentelemetry" Version="26.10.20.1" />-->
-    <PackageVersion Include="galosys.foundation.rabbitmq.client" Version="26.10.20.1" />
-    <!--<PackageVersion Include="galosys.foundation.rocketmq.client" Version="26.10.20.1" />-->
-    <PackageVersion Include="galosys.foundation.serilog" Version="26.10.20.1" />
-    <PackageVersion Include="galosys.foundation.swashbuckle" Version="26.10.20.1" />
-    <!--<PackageVersion Include="galosys.foundation.agents.ai" Version="26.10.20.1" />
-		<PackageVersion Include="galosys.foundation.agents.ai.hosting" Version="26.10.20.1" />
-		<PackageVersion Include="galosys.foundation.agents.ai.hosting.aspnetcore" Version="26.10.20.1" />-->
-    <!--<PackageVersion Include="galosys.foundation.agents.ai.milvus" Version="26.10.20.1" />-->
-    <!--<PackageVersion Include="galosys.foundation.agents.ai.entityframeworkcore" Version="26.10.20.1" />
-		<PackageVersion Include="galosys.foundation.agents.ai.hosting.entityframeworkcore" Version="26.10.20.1" />
-		<PackageVersion Include="galosys.foundation.agents.ai.redis" Version="26.10.20.1" />-->
-    <PackageVersion Include="galosys.foundation.castle.core" Version="26.10.20.1" />
-    <PackageVersion Include="microsoft.extensions.dataingestion.markdig" Version="10.10.0-preview.1.26459.2" />
-    <PackageVersion Include="microsoft.extensions.dataingestion" Version="10.10.0-preview.1.26459.2" />
-  </ItemGroup>
+	<PropertyGroup>
+		<MainVersion>26.10.29.1</MainVersion>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
+		<PackageVersion Include="microsoft.azure.durabletask.core" Version="3.11.2" />
+		<PackageVersion Include="microsoft.azure.durabletask.emulator" Version="2.6.0" />
+		<PackageVersion Include="microsoft.durabletask.sqlserver" Version="1.8.1" />
+		<PackageVersion Include="microsoft.extensions.dependencyinjection" Version="10.0.14" />
+		<PackageVersion Include="microsoft.extensions.http" Version="10.0.13" />
+		<PackageVersion Include="microsoft.extensions.dependencyinjection.abstractions" Version="10.0.13" />
+		<PackageVersion Include="microsoft.extensions.hosting.abstractions" Version="10.0.12" />
+		<PackageVersion Include="microsoft.extensions.logging.abstractions" Version="10.0.13" />
+		<PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+		<PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
+		
+		<PackageVersion Include="microsoft.extensions.dataingestion.markdig" Version="10.10.0-preview.1.26459.2" />
+		<PackageVersion Include="microsoft.extensions.dataingestion" Version="10.10.0-preview.1.26459.2" />
+		
+		<PackageVersion Include="xunit" Version="2.9.3" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+		<PackageVersion Include="system.interactive.async" Version="7.0.1" />
+		<PackageVersion Include="System.Reactive" Version="7.0.0" />
+		<!--<PackageVersion Include="system.reactive.linq" Version="6.1.0" />-->
+		<PackageVersion Include="nats.net" Version="3.3.1" />
+
+		<PackageVersion Include="MudBlazor" Version="9.11.0" />
+		
+		<PackageVersion Include="galosys.foundation.core" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.actuator.entityframeworkcore" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.alibabacloud.sdk.dingtalk" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.aspnetcore.dataprotection.freeredis" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.aspnetcore.dynamicapi" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.aspnetcore.securityheaders" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.compliance" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.core" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.dapper" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.duckdb" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.entityframeworkcore" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.freeredis" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.notification" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.opentelemetry" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.rabbitmq.client" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.rocketmq.client" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.serilog" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.swashbuckle" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai.hosting" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai.hosting.aspnetcore" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai.milvus" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai.entityframeworkcore" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai.hosting.entityframeworkcore" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.agents.ai.redis" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.castle.core" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.wpf" Version="26.8.29.1" />
+		<PackageVersion Include="galosys.foundation.wpf.controls" Version="26.8.29.1" />
+		<PackageVersion Include="galosys.foundation.wpf.pro" Version="26.8.29.1" />
+	</ItemGroup>
 </Project>
