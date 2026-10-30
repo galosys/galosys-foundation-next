@@ -13,7 +13,7 @@
 
 ## 1. 测试先行：分发器调用顺序
 
-- [ ] 1.1 写 `ProtocolDispatcherTests` 与 fake connection/selector/protocol
+- [x] 1.1 写 `ProtocolDispatcherTests` 与 fake connection/selector/protocol（已完成：7 个测试与 fake 类型）
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ProtocolDispatcherTests.cs`
@@ -140,7 +140,7 @@ Expected: 编译失败，提示 `IChannelProtocol`、`IChannelProtocolSelector` 
 
 ## 2. 实现契约与分发器
 
-- [ ] 2.1 创建 `IChannelProtocol`
+- [x] 2.1 创建 `IChannelProtocol`（已完成）
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/IChannelProtocol.cs`
@@ -160,7 +160,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.2 创建 `IChannelProtocolSelector`
+- [x] 2.2 创建 `IChannelProtocolSelector`（已完成）
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/IChannelProtocolSelector.cs`
@@ -179,7 +179,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.3 创建 `ProtocolDispatcher` 的构造与选择调用
+- [x] 2.3 创建 `ProtocolDispatcher` 的构造与选择调用（已完成）
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/ProtocolDispatcher.cs`
@@ -227,7 +227,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.4 加入选择器异常包装与中止分支
+- [x] 2.4 加入选择器异常包装与中止分支（已完成）
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/ProtocolDispatcher.cs`
@@ -257,7 +257,7 @@ catch (Exception error)
 
 保留后续的 null 判断、二次取消检查和协议调用。
 
-- [ ] 2.5 构建并跑首个分发测试
+- [x] 2.5 构建并跑首个分发测试（已完成：构建 0 错误，1/1 通过）
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -267,7 +267,7 @@ Expected: `HandleAsync_CallsSelectorOnce_ThenProtocol` 通过。
 
 ## 3. 补齐失败、取消与不消费测试
 
-- [ ] 3.1 增加无匹配与选择器异常测试
+- [x] 3.1 增加无匹配与选择器异常测试（已完成）
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ProtocolDispatcherTests.cs`
@@ -326,7 +326,7 @@ public async Task HandleAsync_SelectorThrowsInvalidData_DoesNotDoubleWrap()
 }
 ```
 
-- [ ] 3.2 增加取消语义测试
+- [x] 3.2 增加取消语义测试（已完成）
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ProtocolDispatcherTests.cs`
@@ -387,7 +387,7 @@ internal sealed class AbortingSelector : IChannelProtocolSelector
 }
 ```
 
-- [ ] 3.3 增加未知协议不消费输入测试
+- [x] 3.3 增加未知协议不消费输入测试（已完成）
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ProtocolDispatcherTests.cs`
@@ -430,14 +430,14 @@ private sealed class PeekThenNullSelector : IChannelProtocolSelector
 
 `PeekThenNullSelector` 必须是 `private sealed class` 且放在 `ProtocolDispatcherTests` 内部；如果放在文件底部，改为 `internal sealed class`。
 
-- [ ] 3.4 跑分发测试全集
+- [x] 3.4 跑分发测试全集（已完成：7/7 通过）
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~ProtocolDispatcherTests`
 Expected: 全部 `ProtocolDispatcherTests` 通过。
 
 ## 4. README 与最终验证
 
-- [ ] 4.1 更新 Primitives README 的协议分发章节
+- [x] 4.1 更新 Primitives README 的协议分发章节（已完成：新增“协议分发”小节）
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -459,7 +459,7 @@ Expected: 全部 `ProtocolDispatcherTests` 通过。
     选择器返回 null 或抛异常时，分发器用 `InvalidDataException` 中止连接；连接关闭导致的取消不会产生协议错误。
     具体的前缀选择器和 ALPN 在后续 change 提供。
 
-- [ ] 4.2 构建并跑全量测试
+- [x] 4.2 构建并跑全量测试（已完成：154/154 通过）
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -467,7 +467,7 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: 现有测试与新增 `ProtocolDispatcherTests` 全部通过。
 
-- [ ] 4.3 校验 OpenSpec artifact
+- [x] 4.3 校验 OpenSpec artifact（已完成：strict 校验通过）
 
 Run: `openspec validate "primitives-protocol-dispatch-1" --strict --no-interactive`
 Expected: `Change 'primitives-protocol-dispatch-1' is valid`。

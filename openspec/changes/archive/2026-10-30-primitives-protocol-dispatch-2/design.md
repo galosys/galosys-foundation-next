@@ -11,7 +11,7 @@
 - 提供 `PrefixProtocolRule`、`PrefixProtocolSelectorOptions`、`PrefixProtocolSelector`。
 - 按注册顺序做 first-match，规则重叠时先注册者优先。
 - 正确处理半包前缀、EOF、无匹配、超过 `MaxPrefixSize` 和取消。
-- 严格只窥探：每次成功读取后 `AdvanceTo(buffer.Start, buffer.End)`，选中协议后前缀仍可读。
+- 严格只窥探：返回结果时 `AdvanceTo(buffer.Start, buffer.Start)`，等待半包时 `AdvanceTo(buffer.Start, buffer.End)`；选中协议后前缀仍可读。
 - 用单元测试和同端口 loopback 集成测试锁定行为。
 
 **Non-Goals:**
@@ -59,12 +59,17 @@ public sealed class PrefixProtocolRule
 ```csharp
 var result = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 var buffer = result.Buffer;
+IChannelProtocol? selected = null;
+var needsMore = false;
 try
 {
     foreach (var rule in _rules)
     {
         if (StartsWith(buffer, rule.Prefix.Span))
-            return rule.Protocol;
+        {
+            selected = rule.Protocol;
+            break;
+        }
 
         if (IsPartialPrefix(buffer, rule.Prefix.Span))
         {
@@ -72,16 +77,13 @@ try
             break;
         }
     }
-
-    if (result.IsCompleted || buffer.Length >= _maxPrefixSize)
-        return null;
-
-    if (!needsMore)
-        return null;
 }
 finally
 {
-    reader.AdvanceTo(buffer.Start, buffer.End);
+    if (selected is null && needsMore)
+        reader.AdvanceTo(buffer.Start, buffer.End);
+    else
+        reader.AdvanceTo(buffer.Start, buffer.Start);
 }
 ```
 
@@ -89,7 +91,7 @@ finally
 - EOF：`result.IsCompleted` 为 true 时，如果有完整匹配已在上面返回；否则返回 null。
 - 无匹配：当前字节不是任何规则前缀，也不是任何规则的前缀，返回 null。
 - 超过上限：缓冲区长度达到 `MaxPrefixSize` 仍未匹配，返回 null，防止无限缓冲。
-- 每次成功读取都在 `finally` 中 `AdvanceTo(buffer.Start, buffer.End)`；返回协议时也不消费。
+- 每次成功读取后：返回协议或返回 null 时调用 `AdvanceTo(buffer.Start, buffer.Start)`，保证后续协议立即读到同一批字节；等待半包时调用 `AdvanceTo(buffer.Start, buffer.End)`，让下一次 `ReadAsync` 等待新数据。两种情况下都不消费字节。
 - 读取被取消时不调用 `AdvanceTo`，直接把 `OperationCanceledException` 交给分发器；分发器在 `ConnectionClosed` 已取消时安静返回。
 
 **为什么由选择器返回 null，而不是直接 `Abort`：** 选择器只负责“匹配/不匹配”，中止策略属于分发器。这样选择器可以单独测试，也能被其他调用方复用。

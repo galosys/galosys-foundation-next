@@ -247,6 +247,40 @@ internal sealed class ChannelServerRunner : IHostedService
 - 宿主 `HostOptions.ShutdownTimeout` 应大于 `ChannelServerOptions.ShutdownTimeout`，否则宿主会先截断停机等待。
 - 未配置 `EndPoint` 或配置非法时，`StartAsync()` 抛出 `ArgumentException`，不会进入监听状态。
 
+## 协议分发
+
+```csharp
+var dispatcher = new ProtocolDispatcher(selector);
+
+var server = new ChannelServer(
+    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
+    pipeline => pipeline.Run(dispatcher.HandleAsync));
+```
+
+`ProtocolDispatcher.HandleAsync` 与 `ChannelHandlerDelegate` 签名一致，可以直接作为终端处理器。
+选择器只调用一次，必须只窥探 `context.Reader`，不得消费字节：返回结果时用 `AdvanceTo(buffer.Start, buffer.Start)`，等待半包时用 `AdvanceTo(buffer.Start, buffer.End)`。
+选择器返回 null 或抛异常时，分发器用 `InvalidDataException` 中止连接；连接关闭导致的取消不会产生协议错误。
+ALPN 在后续 change 提供。
+
+## 同端口前缀路由
+
+```csharp
+var selector = new PrefixProtocolSelector(new[]
+{
+    new PrefixProtocolRule("HTTP/1."u8.ToArray(), httpProtocol),
+    new PrefixProtocolRule(new byte[] { 0x10 }, mqttProtocol),
+});
+
+var server = new ChannelServer(
+    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
+    pipeline => pipeline.Run(new ProtocolDispatcher(selector).HandleAsync));
+```
+
+规则按注册顺序 first-match；重叠前缀时先注册者优先，需要更长前缀优先时把它放在前面。
+只收到半个前缀时选择器等待更多数据；EOF、无匹配或达到 `MaxPrefixSize` 时返回 null，由 `ProtocolDispatcher` 以 `InvalidDataException` 中止连接。
+选择器只窥探不消费，协议 handler 仍能读到包括前缀在内的完整字节流。
+`MaxPrefixSize` 默认 64，必须大于 0；规则前缀不能超过该值。
+
 ## 配置
 
 `ChannelServerOptions` 覆盖 `EndPoint`、`Backlog`、`MaxConnections`、`NoDelay`、`KeepAlive`、`LingerState`、`ReuseAddress`、`DualMode`、`ShutdownTimeout`、`MaxReadBufferSize`、`MaxWriteBufferSize`、`CreateBoundListenSocket`。
