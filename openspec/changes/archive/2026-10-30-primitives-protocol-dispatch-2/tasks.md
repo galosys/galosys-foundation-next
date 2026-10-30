@@ -5,7 +5,7 @@
 
 **Goal:** 新增 `PrefixProtocolRule`、`PrefixProtocolSelectorOptions` 和 `PrefixProtocolSelector`，实现同端口 first-match 前缀路由，并保证半包等待、EOF/无匹配、`MaxPrefixSize` 和只窥探不消费。
 
-**Architecture:** 规则按注册顺序保存；选择器用 `PipeReader.ReadAsync` 窥探，每次成功读取后 `AdvanceTo(buffer.Start, buffer.End)`。完整匹配立即返回；当前字节是某条规则的严格前缀时等待更多数据；EOF、无匹配或达到 `MaxPrefixSize` 返回 null，由 `ProtocolDispatcher` 中止连接。选择器本身不依赖 P2 session/codec。
+**Architecture:** 规则按注册顺序保存；选择器用 `PipeReader.ReadAsync` 窥探。返回结果时 `AdvanceTo(buffer.Start, buffer.Start)`，等待半包时 `AdvanceTo(buffer.Start, buffer.End)`。完整匹配立即返回；当前字节是某条规则的严格前缀时等待更多数据；EOF、无匹配或达到 `MaxPrefixSize` 返回 null，由 `ProtocolDispatcher` 中止连接。选择器本身不依赖 P2 session/codec。
 
 **Tech Stack:** .NET 10、`System.IO.Pipelines`、xunit 2.9.3、Microsoft.Extensions.Options Abstractions。
 
@@ -13,7 +13,7 @@
 
 ## 1. 测试先行：first-match 与半包
 
-- [ ] 1.1 写 `PrefixProtocolSelectorTests` 的 first-match 与半包测试
+- [x] 1.1 写 `PrefixProtocolSelectorTests` 的 first-match 与半包测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/PrefixProtocolSelectorTests.cs`
@@ -93,7 +93,7 @@ Expected: 编译失败，提示 `PrefixProtocolSelector` 或 `PrefixProtocolRule
 
 ## 2. 实现规则、选项与选择器
 
-- [ ] 2.1 创建 `PrefixProtocolRule`
+- [x] 2.1 创建 `PrefixProtocolRule`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/PrefixProtocolRule.cs`
@@ -124,7 +124,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.2 创建 `PrefixProtocolSelectorOptions`
+- [x] 2.2 创建 `PrefixProtocolSelectorOptions`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/PrefixProtocolSelectorOptions.cs`
@@ -141,7 +141,7 @@ namespace Microsoft.Extensions.Options
 }
 ```
 
-- [ ] 2.3 创建选择器构造与规则校验
+- [x] 2.3 创建选择器构造与规则校验
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/PrefixProtocolSelector.cs`
@@ -200,7 +200,7 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-- [ ] 2.4 实现 `SelectAsync` 的窥探、first-match、半包与上限
+- [x] 2.4 实现 `SelectAsync` 的窥探、first-match、半包与上限
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Protocols/PrefixProtocolSelector.cs`
@@ -221,14 +221,20 @@ public async ValueTask<IChannelProtocol?> SelectAsync(
     {
         var result = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
         var buffer = result.Buffer;
+        var isCompleted = result.IsCompleted;
+        var length = buffer.Length;
         var needsMore = false;
+        IChannelProtocol? selected = null;
 
         try
         {
             foreach (var rule in _rules)
             {
                 if (StartsWith(buffer, rule.Prefix.Span))
-                    return rule.Protocol;
+                {
+                    selected = rule.Protocol;
+                    break;
+                }
 
                 if (IsPartialPrefix(buffer, rule.Prefix.Span))
                 {
@@ -236,17 +242,22 @@ public async ValueTask<IChannelProtocol?> SelectAsync(
                     break;
                 }
             }
-
-            if (result.IsCompleted || buffer.Length >= _maxPrefixSize)
-                return null;
-
-            if (!needsMore)
-                return null;
         }
         finally
         {
-            reader.AdvanceTo(buffer.Start, buffer.End);
+            // 返回结果时 examined 留在 Start，后续协议可以立即读到同一批字节；
+            // 等待半包时推进到 End，让下一次 ReadAsync 等待新数据。
+            if (selected is null && needsMore)
+                reader.AdvanceTo(buffer.Start, buffer.End);
+            else
+                reader.AdvanceTo(buffer.Start, buffer.Start);
         }
+
+        if (selected is not null)
+            return selected;
+
+        if (isCompleted || length >= _maxPrefixSize || !needsMore)
+            return null;
     }
 }
 
@@ -275,7 +286,7 @@ private static bool IsPartialPrefix(
 
 需要在文件顶部补 `using System.Buffers;`。
 
-- [ ] 2.5 构建并跑首个前缀测试
+- [x] 2.5 构建并跑首个前缀测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -285,7 +296,7 @@ Expected: `SelectAsync_FirstMatchWins_ByRegistrationOrder` 与 `SelectAsync_Part
 
 ## 3. 补齐边界与构造测试
 
-- [ ] 3.1 增加重叠规则、EOF 与未知前缀测试
+- [x] 3.1 增加重叠规则、EOF 与未知前缀测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/PrefixProtocolSelectorTests.cs`
@@ -358,7 +369,7 @@ public async Task SelectAsync_PartialPrefixAtEof_ReturnsNull()
 }
 ```
 
-- [ ] 3.2 增加取消、不消费与超限测试
+- [x] 3.2 增加取消、不消费与超限测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/PrefixProtocolSelectorTests.cs`
@@ -438,7 +449,7 @@ public async Task SelectAsync_MaxPrefixSizeReached_ReturnsNull()
 }
 ```
 
-- [ ] 3.3 增加构造校验测试
+- [x] 3.3 增加构造校验测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/PrefixProtocolSelectorTests.cs`
@@ -469,14 +480,14 @@ public void Constructor_RejectsInvalidRules()
 }
 ```
 
-- [ ] 3.4 跑前缀单元测试全集
+- [x] 3.4 跑前缀单元测试全集
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~PrefixProtocolSelectorTests`
 Expected: 全部 `PrefixProtocolSelectorTests` 通过。
 
 ## 4. 同端口集成测试
 
-- [ ] 4.1 写两个前缀协议共用一个 `ChannelServer` 的集成测试
+- [x] 4.1 写两个前缀协议共用一个 `ChannelServer` 的集成测试
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/PrefixProtocolIntegrationTests.cs`
@@ -583,7 +594,7 @@ public sealed class PrefixProtocolIntegrationTests
 }
 ```
 
-- [ ] 4.2 增加半包前缀与未知前缀集成测试
+- [x] 4.2 增加半包前缀与未知前缀集成测试
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/PrefixProtocolIntegrationTests.cs`
@@ -678,14 +689,14 @@ private static ChannelServer StartServer(params PrefixEchoProtocol[] protocols)
 }
 ```
 
-- [ ] 4.3 跑同端口集成测试
+- [x] 4.3 跑同端口集成测试
 
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~PrefixProtocolIntegrationTests`
 Expected: 全部 `PrefixProtocolIntegrationTests` 通过。
 
 ## 5. README 与最终验证
 
-- [ ] 5.1 更新 Primitives README 的同端口前缀路由章节
+- [x] 5.1 更新 Primitives README 的同端口前缀路由章节
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -711,7 +722,7 @@ Expected: 全部 `PrefixProtocolIntegrationTests` 通过。
     选择器只窥探不消费，协议 handler 仍能读到包括前缀在内的完整字节流。
     `MaxPrefixSize` 默认 64，必须大于 0；规则前缀不能超过该值。
 
-- [ ] 5.2 构建并跑全量测试
+- [x] 5.2 构建并跑全量测试
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -719,7 +730,7 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
 Expected: 现有测试与新增前缀测试全部通过。
 
-- [ ] 5.3 校验 OpenSpec artifact
+- [x] 5.3 校验 OpenSpec artifact
 
 Run: `openspec validate "primitives-protocol-dispatch-2" --strict --no-interactive`
 Expected: `Change 'primitives-protocol-dispatch-2' is valid`。

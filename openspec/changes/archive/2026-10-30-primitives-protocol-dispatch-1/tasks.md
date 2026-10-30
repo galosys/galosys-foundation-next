@@ -437,7 +437,7 @@ Expected: 全部 `ProtocolDispatcherTests` 通过。
 
 ## 4. README 与最终验证
 
-- [ ] 4.1 更新 Primitives README 的协议分发章节
+- [x] 4.1 更新 Primitives README 的协议分发章节（已完成：新增“协议分发”小节）
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
