@@ -1,6 +1,6 @@
 # Galosys.Foundation.Primitives
 
-服务端 socket 传输层的最小基架：核心类型位于 `Microsoft.Extensions.Hosting.Net`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup` 与多服务器宿主注册。
+socket 传输层的最小基架（服务端 + 单连接客户端）：核心类型位于 `Microsoft.Extensions.Hosting.Net`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup` 与多服务器宿主注册；P4-1 增加单连接 `ChannelClient`；P4-2 增加重连与指数退避；P4-3 增加连接池与批量写入。
 
 ## 能力
 
@@ -150,6 +150,93 @@ await server.RunAsync(cancellationToken);
 ```
 
 `StartAsync` 只负责绑定、监听并启动接受循环，返回即可连接；`RunAsync` 是“启动并阻塞到停机”的兼容入口。`pipeline` 回调在启动时执行一次，必须调用 `Run`。
+
+## 单连接客户端（P4-1）
+
+```csharp
+await using var client = new ChannelClient(new ChannelClientOptions
+{
+    EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
+    ConnectTimeout = TimeSpan.FromSeconds(5),
+});
+
+await client.ConnectAsync(cancellationToken);
+
+await client.Connection!.Writer.WriteAsync(bytes);
+var read = await client.Connection.Reader.ReadAsync();
+```
+
+- `ConnectAsync` 幂等，并发调用共享一次连接尝试；`CloseAsync` / `DisposeAsync` 进入终态 `Closed`。
+- 客户端只暴露字节 `Connection`，消息收发通过 P2 的 `Connection.AsSession<T>()`。
+- `ChannelClientOptions.Tls` 目前只做配置校验；TLS 握手尚未接入，`Tls` 非空时 `ConnectAsync` 抛 `NotSupportedException`，不会回退明文。
+- 连接池与 batch 见 P4-3 章节。
+
+## 重连与退避（P4-2）
+
+```csharp
+var options = new ChannelClientOptions
+{
+    EndPoint = endPoint,
+    Reconnect = new ChannelReconnectPolicy
+    {
+        MaxAttempts = 0,                 // 0 = 无限
+        InitialDelay = TimeSpan.FromSeconds(1),
+        MaxDelay = TimeSpan.FromSeconds(30),
+        BackoffMultiplier = 2.0,
+        JitterFactor = 0.2,
+    },
+};
+```
+
+- 首次连接失败与已连接断线共用同一套退避。
+- 重连成功产生新的 `ChannelContext` 与新 `ConnectionId`；断开期间不缓冲、不重放消息。
+- `MaxAttempts = 0` 时 `ConnectAsync` 可能一直等待，调用方必须传入可取消 token。
+- 配置 TLS 时直接抛 `NotSupportedException`，调用方取消与配置错误不会重试。
+- 连接池与 batch 见 P4-3 章节。
+
+## 连接池（P4-3）
+
+```csharp
+await using var pool = new ChannelClientPool(new ChannelClientPoolOptions
+{
+    ClientOptions = new ChannelClientOptions
+    {
+        EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
+        ConnectTimeout = TimeSpan.FromSeconds(5),
+    },
+    MaxSize = 8,
+    RentTimeout = TimeSpan.FromSeconds(30),
+});
+
+var client = await pool.RentAsync(cancellationToken);
+try
+{
+    // 使用 client.Connection
+}
+finally
+{
+    await pool.ReturnAsync(client);
+}
+```
+
+- `MaxSize` 是已创建 + 正在创建 + 已租出的硬上限；池满时不再新建连接。
+- 池满时 `RentAsync` 最多等待 `RentTimeout`，超时抛 `TimeoutException`；调用方取消抛 `OperationCanceledException`。
+- 归还即转移所有权：重复归还、归还其他池的客户端都抛 `InvalidOperationException`。
+- 断线的空闲客户端在归还或再次租借时被释放并替换；池不做空闲淘汰、负载均衡与消息重放。
+- 池释放后 `RentAsync` 抛 `ObjectDisposedException`；已租出的客户端不被强制中断，归还时才释放。
+- `IChannelClientFactory` 可替换创建方式，便于测试与后续 DI 接入。
+
+## 批量写入（P4-3）
+
+```csharp
+await using var session = client.Connection!.AsLineTextSession();
+await session.WriteBatchAsync(new[] { "alpha", "beta", "gamma" });
+```
+
+- 非空批次持有同一个写锁，按顺序编码并写出多帧，只调用一次 `FlushAsync`。
+- 空批次不写、不 flush。
+- 内置 session 走单次 flush 快路径；自定义 `IChannelSession<T>` 退化为顺序 `WriteAsync`。
+- 批次失败会中止连接，不保证原子送达，接收方可能只看到前缀。
 
 ## 多服务器组合
 
@@ -311,4 +398,4 @@ dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primiti
 
 ## 阶段
 
-P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b（本阶段）：`ChannelServerGroup` 与多服务器 IoC 注册。消息层、TLS、客户端、NamedPipe/Diagnostics 在后续阶段。
+P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b：`ChannelServerGroup` 与多服务器 IoC 注册。P4-1（本阶段）：单连接 `ChannelClient`。P4-2（本阶段）：重连与指数退避。P4-3（本阶段）：连接池与批量写入。TLS、NamedPipe/Diagnostics 在后续阶段。

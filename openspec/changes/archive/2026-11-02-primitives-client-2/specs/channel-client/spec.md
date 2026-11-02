@@ -18,6 +18,13 @@ The implementation SHALL provide a public `IChannelClient : IAsyncDisposable` in
 - **AND** 每次事件的 `OldState` / `NewState` 与实际迁移一致
 - **AND** `Connection` 只在第二个事件之后非 null
 
+#### Scenario: 连接断开后清空连接视图
+
+- **WHEN** 未配置重连策略（或失败不可重试）时，已连接的客户端遇到远端关闭并迁移到 `Disconnected`
+- **THEN** `StateChanged` 报告 `Connected → Disconnected`
+- **AND** `Connection` 变为 null
+- **AND** 之前捕获的 `ChannelContext` 的 `ConnectionClosed` 已触发
+
 #### Scenario: 重连时连接视图为空
 
 - **WHEN** 已连接的客户端因可重试失败进入 `Reconnecting`
@@ -40,7 +47,7 @@ The implementation SHALL provide a public `IChannelClient : IAsyncDisposable` in
 
 ### Requirement: 单连接建立
 
-The implementation SHALL create one socket-based connection per attempt, using `ChannelClientOptions.EndPoint`, the configured `ConnectTimeout`, TCP no-delay, and optional keep-alive. The attempt MUST include the optional client TLS handshake before any `ChannelContext` is exposed. Concurrent `ConnectAsync` calls MUST share one operation; a call while `Connected` MUST complete without opening another connection. A successful connect MUST create a new `ChannelContext` with a new `ConnectionId`. When `ChannelClientOptions.Reconnect` is null, a failure MUST NOT be retried and `ConnectAsync` MUST surface the original exception. When `Reconnect` is configured, `ConnectAsync` MUST retry retryable failures according to the reconnect policy and MUST complete only after a successful connection, a terminal failure, or cancellation. On every failed attempt, the client MUST clean up partial resources and publish the failure. Caller cancellation MUST surface as `OperationCanceledException` with a non-retryable failure and MUST NOT leave a connected or half-initialized client.
+The implementation SHALL create one socket-based connection per attempt, using `ChannelClientOptions.EndPoint`, the configured `ConnectTimeout`, TCP no-delay, and optional keep-alive. When `ChannelClientOptions.Tls` is non-null, `ConnectAsync` MUST throw `NotSupportedException` before creating any socket or changing state; the client TLS handshake is deferred to `primitives-tls-transport-1/2`. Concurrent `ConnectAsync` calls MUST share one operation; a call while `Connected` MUST complete without opening another connection. A successful connect MUST create a new `ChannelContext` with a new `ConnectionId`. When `ChannelClientOptions.Reconnect` is null, a failure MUST NOT be retried and `ConnectAsync` MUST surface the original exception. When `Reconnect` is configured, `ConnectAsync` MUST retry retryable failures according to the reconnect policy and MUST complete only after a successful connection, a terminal failure, or cancellation. On every failed attempt, the client MUST clean up partial resources and publish the failure. Caller cancellation MUST surface as `OperationCanceledException` with a non-retryable failure and MUST NOT leave a connected or half-initialized client.
 
 #### Scenario: 明文 loopback 回显
 
@@ -48,7 +55,7 @@ The implementation SHALL create one socket-based connection per attempt, using `
 - **THEN** 连接成功且 `State` 为 `Connected`
 - **AND** 通过 `Connection.Writer` 写入的字节按顺序从服务端回显到 `Connection.Reader`
 
-#### Scenario: 并发 ConnectAsync 共享一次操作
+#### Scenario: 并发 ConnectAsync 共享一次连接
 
 - **WHEN** 两个任务同时对同一客户端调用 `ConnectAsync`
 - **THEN** 只运行一条连接/重试操作
@@ -62,13 +69,27 @@ The implementation SHALL create one socket-based connection per attempt, using `
 - **AND** 不创建新 socket、不更换 `ConnectionId`
 - **AND** 不触发额外的 `StateChanged`
 
-#### Scenario: 无重连策略时连接被拒绝
+#### Scenario: 配置 TLS 时暂不支持连接
+
+- **WHEN** `Tls` 非空且调用 `ConnectAsync`（即使配置了 `Reconnect`）
+- **THEN** 抛出 `NotSupportedException`
+- **AND** 不创建 socket、不进入 `Connecting`、状态保持 `Disconnected`
+- **AND** `StateChanged` 不出现 `Reconnecting`
+
+#### Scenario: 连接被拒绝
 
 - **WHEN** `Reconnect` 为 null，目标端点没有监听器，`ConnectAsync` 收到 `SocketException`（`ConnectionRefused`）
 - **THEN** 抛出原始 `SocketException`
 - **AND** 状态回到 `Disconnected`
 - **AND** `StateChanged` 携带 `ChannelConnectionFailureKind.ConnectionRefused` 且 `IsRetryable` 为 true
 - **AND** 不进入 `Reconnecting`
+
+#### Scenario: 连接超时
+
+- **WHEN** `Reconnect` 为 null 且目标地址在 `ConnectTimeout` 内未完成 TCP 连接
+- **THEN** `ConnectAsync` 抛出 `TimeoutException`
+- **AND** 失败分类为 `TimedOut` 且 `IsRetryable` 为 true
+- **AND** 半成品 socket 被释放
 
 #### Scenario: 有重连策略时首次连接重试成功
 
@@ -138,7 +159,7 @@ The implementation SHALL provide a public sealed `ChannelClientOptions` in `Micr
 
 ### Requirement: 自动重连与退避
 
-The implementation SHALL reconnect after an established connection is lost when a `ChannelReconnectPolicy` is configured. On an unexpected `Connected` connection end, the client MUST dispose the old TLS wrapper and `ChannelContext`, publish `Reconnecting` with the last failure, and start a background retry operation. Each retry MUST create a new socket and `ChannelContext`; success MUST publish `Connected` with a new `ConnectionId`. Delays MUST start at `InitialDelay`, multiply by `BackoffMultiplier` after each failed attempt, cap at `MaxDelay`, and apply jitter in `[1 - JitterFactor, 1 + JitterFactor]`. Delays MUST use `TimeProvider` through `Task.Delay(TimeSpan, TimeProvider, CancellationToken)`; bare `Task.Delay` MUST NOT be used for backoff. `MaxAttempts = 0` MUST mean unlimited retries; a positive value MUST limit the number of retries after the initial failure. A failure rejected by `ShouldRetry` or by the default classification MUST stop retrying and publish `Disconnected`. `CloseAsync` or `DisposeAsync` MUST cancel any delay or in-flight retry, keep `Closed`, and prevent any further connection attempt.
+The implementation SHALL reconnect after an established connection is lost when a `ChannelReconnectPolicy` is configured. On an unexpected `Connected` connection end, the client MUST dispose the old `ChannelContext`, publish `Reconnecting` with the last failure, and start a background retry operation. Each retry MUST create a new socket and `ChannelContext`; success MUST publish `Connected` with a new `ConnectionId`. Delays MUST start at `InitialDelay`, multiply by `BackoffMultiplier` after each failed attempt, cap at `MaxDelay`, and apply jitter in `[1 - JitterFactor, 1 + JitterFactor]`. Delays MUST use `TimeProvider` through `Task.Delay(TimeSpan, TimeProvider, CancellationToken)`; bare `Task.Delay` MUST NOT be used for backoff. `MaxAttempts = 0` MUST mean unlimited retries; a positive value MUST limit the number of retries after the initial failure. A failure rejected by `ShouldRetry` or by the default classification MUST stop retrying and publish `Disconnected`. `CloseAsync` or `DisposeAsync` MUST cancel any delay or in-flight retry, keep `Closed`, and prevent any further connection attempt.
 
 #### Scenario: 已连接后断线自动重连
 
@@ -160,12 +181,12 @@ The implementation SHALL reconnect after an established connection is lost when 
 - **AND** 不再创建新的 socket
 - **AND** 携带最后一次失败
 
-#### Scenario: TLS 证书失败不重试
+#### Scenario: 配置 TLS 时不重连
 
-- **WHEN** 首次连接或重连时 TLS 证书校验失败
-- **THEN** 失败分类为 `Authentication`
+- **WHEN** `Tls` 非空并调用 `ConnectAsync`
+- **THEN** 抛出 `NotSupportedException`
 - **AND** 不进入 `Reconnecting`
-- **AND** 状态回到 `Disconnected`
+- **AND** 状态保持 `Disconnected`
 
 #### Scenario: ShouldRetry 覆盖默认分类
 

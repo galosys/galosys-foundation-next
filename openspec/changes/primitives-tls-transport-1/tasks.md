@@ -13,7 +13,7 @@
 
 ## 1. TLS 配置
 
-- [ ] 1.1 写 `ChannelTlsOptions` 失败测试
+- [x] 1.1 写 `ChannelTlsOptions` 失败测试 — 已实现并测试通过。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ChannelTlsOptionsTests.cs`
@@ -51,7 +51,7 @@ public sealed class ChannelTlsOptionsTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
 Expected: 编译失败，提示 `ChannelTlsOptions` 不存在（这是本任务的“红”）。
 
-- [ ] 1.2 新增 `ChannelTlsOptions` 与校验
+- [x] 1.2 新增 `ChannelTlsOptions` 与校验 — 已实现并测试通过。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelTlsOptions.cs`
@@ -113,7 +113,7 @@ namespace Microsoft.Extensions.Options
 }
 ```
 
-- [ ] 1.3 新增测试证书生成器
+- [x] 1.3 新增测试证书生成器 — 已实现并测试通过。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/TlsTestCertificates.cs`
@@ -148,7 +148,7 @@ internal static class TlsTestCertificates
 }
 ```
 
-- [ ] 1.4 补齐配置校验测试
+- [x] 1.4 补齐配置校验测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelTlsOptionsTests.cs`

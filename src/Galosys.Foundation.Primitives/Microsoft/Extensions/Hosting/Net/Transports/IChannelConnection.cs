@@ -23,6 +23,12 @@ namespace Microsoft.Extensions.Hosting.Net
         /// </summary>
         Task<Exception?> Termination { get; }
 
+        /// <summary>
+        /// 接收方向结束信号。对端 EOF、socket 故障、<see cref="Abort"/> 或释放时完成；
+        /// 不携带异常，错误原因从 <see cref="Termination"/> 读取。
+        /// </summary>
+        Task Completion { get; }
+
         /// <summary>立即中止连接；不刷新未发送的数据。</summary>
         void Abort(Exception? reason);
     }

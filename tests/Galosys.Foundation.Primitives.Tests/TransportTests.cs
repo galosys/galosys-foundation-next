@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Hosting.Net;
+using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Primitives.Tests;
 
@@ -181,5 +182,23 @@ public sealed class TransportTests
         await firstStream.WriteAsync("b"u8.ToArray());
         Assert.Equal("b", System.Text.Encoding.UTF8.GetString(
             await TestClient.ReadExactlyAsync(firstStream, 1)));
+    }
+
+    [Fact]
+    public async Task Completion_SignalsWhenPeerClosesSendDirection()
+    {
+        await using var server = await TestServer.StartAsync(_ => Task.CompletedTask);
+        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        await socket.ConnectAsync(server.EndPoint);
+
+        await using var connection = new SocketChannelConnection(
+            socket,
+            new ChannelServerOptions { EndPoint = server.EndPoint },
+            logger: null);
+
+        socket.Shutdown(SocketShutdown.Send);
+
+        await connection.Completion.WaitAsync(TestWaits.DefaultTimeout);
+        Assert.True(connection.Completion.IsCompletedSuccessfully);
     }
 }

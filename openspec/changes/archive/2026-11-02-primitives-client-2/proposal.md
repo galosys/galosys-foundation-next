@@ -11,7 +11,7 @@
 - `ChannelClient` 在可重试失败时进入 `Reconnecting`，按指数退避 + 抖动重试；成功后回到 `Connected` 并暴露新连接，非可重试失败或尝试耗尽后回到 `Disconnected`。
 - 重连延迟只使用 `Task.Delay(TimeSpan, TimeProvider, CancellationToken)`，禁止裸 `Task.Delay`；测试用 `FakeTimeProvider` 推进假时钟。
 - `CloseAsync` / `DisposeAsync` 取消退避与重连，进入 `Closed` 后不再重连、不再触发状态事件。
-- 新增 `ChannelReconnectTests.cs`：首次连接重试、断线自动重连、TLS 证书失败不重试、`ShouldRetry` 覆盖、尝试耗尽、关闭打断退避、调用方取消。
+- 新增 `ChannelReconnectTests.cs`：首次连接重试、断线自动重连、配置 TLS 时不重连、`ShouldRetry` 覆盖、尝试耗尽、关闭打断退避、调用方取消。
 - 明确不实现连接池、batch、多 EndPoint 故障转移和消息重放。
 
 ## Capabilities

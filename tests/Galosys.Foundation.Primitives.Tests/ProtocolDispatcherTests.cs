@@ -241,6 +241,8 @@ internal sealed class FakeChannelConnection : IChannelConnection
     private readonly Pipe _pipe = new();
     private readonly TaskCompletionSource<Exception?> _termination =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _completion =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public EndPoint? LocalEndPoint => new IPEndPoint(IPAddress.Loopback, 0);
 
@@ -250,17 +252,21 @@ internal sealed class FakeChannelConnection : IChannelConnection
 
     public Task<Exception?> Termination => _termination.Task;
 
+    public Task Completion => _completion.Task;
+
     public PipeWriter Writer => _pipe.Writer;
 
     public void Abort(Exception? reason)
     {
         _termination.TrySetResult(reason);
+        _completion.TrySetResult();
         _pipe.Writer.Complete();
     }
 
     public ValueTask DisposeAsync()
     {
         _termination.TrySetResult(null);
+        _completion.TrySetResult();
         _pipe.Writer.Complete();
         return ValueTask.CompletedTask;
     }
