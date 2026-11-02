@@ -46,7 +46,7 @@ foundation 类库中用于 DI 服务解析的辅助类型 MUST 声明在 `Micros
 #### Scenario: 核心类型文件目录
 
 - **WHEN** 检查 `ChannelServer.cs`、`ChannelClient.cs`、`ChannelContext.cs`、`IMessageCodec.cs`、`IMessageFramer.cs`、`IChannelSession.cs`
-- **THEN** 它们位于 `Galosys.Foundation.Channel` 项目的 `Channel/` 目录下
+- **THEN** 它们位于 `Galosys.Foundation.Channel` 项目的 `Galosys/Foundation/Channel/` 目录下
 
 ### Requirement: 核心类型位于 Galosys.Foundation.Channel 命名空间
 

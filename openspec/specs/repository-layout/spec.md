@@ -18,6 +18,7 @@
 - **WHEN** 列出 `src/` 下的项目目录
 - **THEN** 仅包含 `Galosys.Foundation.Channel`、`Galosys.Foundation.Doris`、`Galosys.Foundation.Nats.Net`
 - **AND** 不存在示例项目目录
+- **AND** 不存在名为 `Galosys.Foundation.Primitives` 的目录
 
 ### Requirement: 解决方案结构映射磁盘目录
 
@@ -38,7 +39,7 @@
 
 ### Requirement: 迁移后的项目引用与构建路径有效
 
-迁移后的示例项目 MUST 能通过新的 `samples/` 路径构建，且对 `src/` 下 foundation 类库的项目引用 MUST 正确解析。
+迁移后的示例项目 MUST 能通过新的 `samples/` 路径构建，且对 `src/` 下 foundation 类库的项目引用 MUST 正确解析。`NetServer.ConsoleApp` MUST 解析到 `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`，测试项目 MUST 解析到 `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`。
 
 #### Scenario: 迁移示例可单独构建
 

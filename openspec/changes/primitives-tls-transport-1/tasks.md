@@ -200,7 +200,7 @@ Expected: 全部 `ChannelTlsOptionsTests` 通过。
 - [ ] 2.1 实现 `SslStreamDuplexPipe`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/SslStreamDuplexPipe.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/SslStreamDuplexPipe.cs`
 
 ```csharp
 using System.IO.Pipelines;
@@ -273,7 +273,7 @@ namespace Galosys.Foundation.Channel
 - [ ] 2.2 实现 `TlsDuplexPipe` 握手与读泵
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/TlsDuplexPipe.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/TlsDuplexPipe.cs`
 
 ```csharp
 using System.IO.Pipelines;
@@ -391,7 +391,7 @@ namespace Galosys.Foundation.Channel
 - [ ] 2.3 实现写泵、`close_notify` 与释放
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Channel/Transports/TlsDuplexPipe.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/TlsDuplexPipe.cs`
 
 把 `WritePumpAsync` 与 `DisposeAsync` 替换为：
 

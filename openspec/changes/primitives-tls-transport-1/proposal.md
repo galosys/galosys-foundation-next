@@ -26,7 +26,7 @@
 
 ## Impact
 
-- 代码：新增 `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelTlsOptions.cs`、`Channel/Transports/SslStreamDuplexPipe.cs`、`Channel/Transports/TlsDuplexPipe.cs`；修改 `src/Galosys.Foundation.Channel/README.md`。
+- 代码：新增 `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelTlsOptions.cs`、`Galosys/Foundation/Channel/Transports/SslStreamDuplexPipe.cs`、`Galosys/Foundation/Channel/Transports/TlsDuplexPipe.cs`；修改 `src/Galosys.Foundation.Channel/README.md`。
 - 公共 API：新增 `ChannelTlsOptions`；`TlsDuplexPipe` / `SslStreamDuplexPipe` 保持 internal，不出现在公共签名中。
 - 依赖：仅使用 .NET 基础库 `System.Net.Security`、`System.Security.Cryptography.X509Certificates`、`System.IO.Pipelines`，不新增 NuGet 包，不引入 `Microsoft.AspNetCore.*`。
 - 测试：`tests/Galosys.Foundation.Channel.Tests/` 新增 `ChannelTlsOptionsTests.cs`、`TlsDuplexPipeTests.cs`、`TlsTestCertificates.cs`；现有测试不改。

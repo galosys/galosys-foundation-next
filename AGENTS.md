@@ -31,9 +31,10 @@
 - **本地类库**：`Galosys.Foundation.Channel`（逻辑通道传输框架（socket 传输 + 分帧编解码 + 客户端/服务端），
   核心类型用 `Galosys.Foundation.Channel`，Options 类型用 `Microsoft.Extensions.Options`；多服务器组合用
   `ChannelServerGroup`，宿主注册用 `AddChannelServer(definition)` + `AddChannelServerGroup()`；
-  消息层用 `Framing/` 的 `IMessageFramer`、`Codecs/` 的 `IMessageCodec<T>` 和 `Session/` 的
+  消息层用 `Galosys/Foundation/Channel/Framing/` 的 `IMessageFramer`、`Galosys/Foundation/Channel/Codecs/` 的
+  `IMessageCodec<T>` 和 `Galosys/Foundation/Channel/Session/` 的
   `IChannelSession<T>`（`AsLineTextSession`/`AsJsonSession` 组合入口，批量写用 `WriteBatchAsync`）；
-  客户端用 `Client/` 的 `ChannelClient`（重连退避）与 `ChannelClientPool`（有界连接池））、
+  客户端用 `Galosys/Foundation/Channel/Client/` 的 `ChannelClient`（重连退避）与 `ChannelClientPool`（有界连接池））、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
   `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）。
 - `samples/MafSample.ConsoleApp/Microsoft/Extensions/Hosting/WindowedBatchWorker.cs` 是本地辅助类，不是包里的类型。

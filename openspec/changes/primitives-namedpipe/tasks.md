@@ -17,7 +17,7 @@
 
 **Files:**
 - Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelTransportKind.cs`
-- Create: `src/Galosys.Foundation.Channel/Channel/NamedPipeEndPoint.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/NamedPipeEndPoint.cs`
 
 **Step 1: 写入枚举**
 
@@ -134,8 +134,8 @@ Expected: 0 errors；现有 TCP options 测试仍通过。
 - [ ] 2.1 增加 internal `IChannelListenerFactory` 与解析器
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/IChannelListenerFactory.cs`
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/SocketChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/IChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/SocketChannelListenerFactory.cs`
 
 **Step 1: 契约**
 
@@ -190,7 +190,7 @@ Expected: 0 errors。
 - [ ] 3.1 创建 `NamedPipeChannelConnection` 的属性与 Pipe 组合
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelConnection.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/NamedPipeChannelConnection.cs`
 
 **Step 1: 写入连接骨架**
 
@@ -260,7 +260,7 @@ Expected: 0 errors（`IChannelConnection` 还缺 `Abort`/`DisposeAsync` 时会�
 - [ ] 3.2 实现 `Abort` 与 `DisposeAsync`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelConnection.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/NamedPipeChannelConnection.cs`
 
 **Step 1: 增加幂等字段**
 
@@ -345,9 +345,9 @@ Expected: 0 errors。
 - [ ] 4.1 实现 `NamedPipeChannelListener.BindAsync` 与 pending 实例
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelListener.cs`
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelListenerFactory.cs`
-- Create: `src/Galosys.Foundation.Channel/Channel/Transports/ChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/NamedPipeChannelListener.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/NamedPipeChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/ChannelListenerFactory.cs`
 
 **Step 1: 写入 listener 骨架**
 
@@ -480,7 +480,7 @@ Expected: 0 errors（`AcceptAsync`/`UnbindAsync` 尚未实现时继续 4.2）。
 - [ ] 4.2 实现 `AcceptAsync`、`UnbindAsync` 与 `DisposeAsync`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelListener.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/NamedPipeChannelListener.cs`
 
 **Step 1: 实现 accept**
 
@@ -555,7 +555,7 @@ Expected: 0 errors。
 - [ ] 4.3 让 `ChannelServerCore` 通过工厂绑定 listener
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Channel/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/ChannelServerCore.cs`
 
 **Step 1: 增加字段并在构造函数解析**
 

@@ -67,6 +67,6 @@ public sealed class NamespaceConventionTests
     {
         var assembly = typeof(ChannelServer).Assembly;
 
-        Assert.Empty(assembly.GetTypes().Where(t => t.Namespace == "Microsoft.Extensions.Hosting.Net"));
+        Assert.DoesNotContain(assembly.GetTypes(), t => t.Namespace == "Microsoft.Extensions.Hosting.Net");
     }
 }

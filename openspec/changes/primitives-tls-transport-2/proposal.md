@@ -27,7 +27,7 @@
 
 ## Impact
 
-- 代码：新增 `src/Galosys.Foundation.Channel/Channel/Pipeline/TlsPipelineExtensions.cs`；修改 `src/Galosys.Foundation.Channel/README.md`。
+- 代码：新增 `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Pipeline/TlsPipelineExtensions.cs`；修改 `src/Galosys.Foundation.Channel/README.md`。
 - 公共 API：新增 `UseTls` 扩展方法；`TlsDuplexPipe` 仍为 internal。
 - 测试：`tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs` 新增 TLS 服务端集成测试；复用 `TlsTestCertificates`。
 - 依赖：依赖 `primitives-tls-transport-1` 与 `primitives-server-composition-2`（测试使用 sealed `ChannelServer`）；不新增 NuGet 包。

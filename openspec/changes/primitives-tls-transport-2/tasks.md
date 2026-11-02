@@ -78,7 +78,7 @@ Expected: 编译失败，提示 `UseTls` 不存在（这是本任务的“红”
 - [ ] 1.2 新增 `TlsPipelineExtensions`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Channel/Pipeline/TlsPipelineExtensions.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Pipeline/TlsPipelineExtensions.cs`
 
 ```csharp
 using Microsoft.Extensions.Options;
