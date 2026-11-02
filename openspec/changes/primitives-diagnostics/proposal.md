@@ -28,7 +28,7 @@ P1/P2 的服务端和消息层只有 `ILogger` 日志，没有 trace 和 metrics
 
 ## Impact
 
-- 代码：新增 `Microsoft/Extensions/Hosting/Net/Diagnostics/ChannelDiagnostics.cs`、`ChannelDiagnosticsOptions.cs`、`Diagnostics/DiagnosticsGuard.cs`（可选辅助）；修改 `ChannelServerOptions.cs`、`ChannelServerCore.cs`、`MessageChannelOptions.cs`、`ChannelSession.cs`、`ChannelContextSessionExtensions.cs`（若工厂需要传递协议名）。
+- 代码：新增 `Channel/Diagnostics/ChannelDiagnostics.cs`、`Microsoft/Extensions/Options/ChannelDiagnosticsOptions.cs`、`Channel/Diagnostics/DiagnosticsGuard.cs`（可选辅助）；修改 `ChannelServerOptions.cs`、`ChannelServerCore.cs`、`MessageChannelOptions.cs`、`ChannelSession.cs`、`ChannelContextSessionExtensions.cs`（若工厂需要传递协议名）。
 - 公共 API：新增 `ChannelDiagnostics` 常量与 `ChannelDiagnosticsOptions`；`ChannelServerOptions.Diagnostics`、`MessageChannelOptions.Diagnostics`/`ProtocolName` 为增量属性；无破坏性变更。
 - 测试：`tests/Galosys.Foundation.Channel.Tests/` 增加 `DiagnosticsTestSupport.cs`、`ServerDiagnosticsTests.cs`、`SessionDiagnosticsTests.cs`、`DiagnosticsOverheadTests.cs`。
 - 依赖：仅使用 .NET 10 内置的 `System.Diagnostics.DiagnosticSource`、`System.Diagnostics.Metrics`；不新增 NuGet 包，不引入 OpenTelemetry SDK。

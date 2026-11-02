@@ -200,12 +200,12 @@ Expected: 全部 `ChannelTlsOptionsTests` 通过。
 - [ ] 2.1 实现 `SslStreamDuplexPipe`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/SslStreamDuplexPipe.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/SslStreamDuplexPipe.cs`
 
 ```csharp
 using System.IO.Pipelines;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     /// <summary>把 IDuplexPipe 适配成 SslStream 使用的只读/只写 Stream；不拥有底层管道。</summary>
     internal sealed class SslStreamDuplexPipe : Stream
@@ -273,14 +273,14 @@ namespace Microsoft.Extensions.Hosting.Net
 - [ ] 2.2 实现 `TlsDuplexPipe` 握手与读泵
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/TlsDuplexPipe.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/TlsDuplexPipe.cs`
 
 ```csharp
 using System.IO.Pipelines;
 using System.Net.Security;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     /// <summary>认证后的 TLS 双向管道；底层传输仍由框架释放。</summary>
     internal sealed class TlsDuplexPipe : IDuplexPipe, IAsyncDisposable
@@ -391,7 +391,7 @@ namespace Microsoft.Extensions.Hosting.Net
 - [ ] 2.3 实现写泵、`close_notify` 与释放
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/TlsDuplexPipe.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Transports/TlsDuplexPipe.cs`
 
 把 `WritePumpAsync` 与 `DisposeAsync` 替换为：
 
@@ -489,7 +489,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;

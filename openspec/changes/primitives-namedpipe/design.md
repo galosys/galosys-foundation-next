@@ -54,7 +54,7 @@ namespace Microsoft.Extensions.Options
 public ChannelTransportKind Transport { get; set; } = ChannelTransportKind.Tcp;
 ```
 
-NamedPipe 端点单独建模，放在 `Microsoft.Extensions.Hosting.Net`：
+NamedPipe 端点单独建模，放在 `Galosys.Foundation.Channel`：
 
 ```csharp
 public sealed class NamedPipeEndPoint : EndPoint
@@ -213,7 +213,7 @@ await client.ConnectAsync(TestWaits.DefaultTimeout, ct);
 
 ## Migration Plan
 
-1. 在 `Microsoft/Extensions/Options/` 增加 `ChannelTransportKind`，在 `Microsoft/Extensions/Hosting/Net/` 增加 `NamedPipeEndPoint`；补 XML 文档与构造校验。
+1. 在 `Microsoft/Extensions/Options/` 增加 `ChannelTransportKind`，在 `Channel/` 增加 `NamedPipeEndPoint`；补 XML 文档与构造校验。
 2. 修改 `ChannelServerOptions`：增加 `Transport`，在 `Validate` 中加入传输/端点匹配与 `CreateBoundListenSocket` 校验；`Clone` 复制新属性。
 3. 增加 `IChannelListenerFactory`、`ChannelListenerFactory`、`SocketChannelListenerFactory`，把现有 `SocketChannelListener.BindAsync` 包装成工厂。
 4. 修改 `ChannelServerCore`：构造时解析工厂，`StartAsync` 通过工厂绑定；TCP 路径行为不变。

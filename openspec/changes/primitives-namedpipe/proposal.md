@@ -26,7 +26,7 @@ P1/P1.5 的服务端内核只支持 TCP：`ChannelServerCore` 在启动时直接
 
 ## Impact
 
-- 代码：新增 `Microsoft/Extensions/Options/ChannelTransportKind.cs`、`Microsoft/Extensions/Hosting/Net/NamedPipeEndPoint.cs`、`Microsoft/Extensions/Hosting/Net/Transports/IChannelListenerFactory.cs`、`ChannelListenerFactory.cs`、`SocketChannelListenerFactory.cs`、`NamedPipeChannelListener.cs`、`NamedPipeChannelConnection.cs`；修改 `ChannelServerOptions.cs`、`ChannelServerCore.cs`。
+- 代码：新增 `Microsoft/Extensions/Options/ChannelTransportKind.cs`、`Channel/NamedPipeEndPoint.cs`、`Channel/Transports/IChannelListenerFactory.cs`、`Channel/Transports/ChannelListenerFactory.cs`、`Channel/Transports/SocketChannelListenerFactory.cs`、`Channel/Transports/NamedPipeChannelListener.cs`、`Channel/Transports/NamedPipeChannelConnection.cs`；修改 `ChannelServerOptions.cs`、`ChannelServerCore.cs`。
 - 公共 API：新增 `ChannelTransportKind`、`NamedPipeEndPoint`、`ChannelServerOptions.Transport`；`IChannelServer`、`ChannelContext`、`ChannelServer` 无破坏性变更；`IChannelListener` / `IChannelConnection` / 具体 listener 与 connection 类型继续保持 internal。
 - 测试：`tests/Galosys.Foundation.Channel.Tests/` 增加 `NamedPipeTransportTests.cs` 与 `NamedPipeTestSupport.cs`，并在 `NamespaceConventionTests.cs` 增加 internal 类型可见性断言。
 - 依赖：不新增 NuGet 包；仅使用 .NET 10 的 `System.IO.Pipes`、`System.IO.Pipelines` 与现有依赖。

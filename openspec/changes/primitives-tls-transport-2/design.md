@@ -27,7 +27,7 @@
 ### 1. 用扩展方法添加中间件，不新增中间件类型
 
 ```csharp
-namespace Microsoft.Extensions.Hosting.Net;
+namespace Galosys.Foundation.Channel;
 
 public static class TlsPipelineExtensions
 {

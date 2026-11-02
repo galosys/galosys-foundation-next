@@ -17,7 +17,7 @@
 
 **Files:**
 - Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelTransportKind.cs`
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/NamedPipeEndPoint.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/NamedPipeEndPoint.cs`
 
 **Step 1: 写入枚举**
 
@@ -42,7 +42,7 @@ namespace Microsoft.Extensions.Options
 using System.Net;
 using System.Net.Sockets;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     /// <summary>Windows 命名管道端点。</summary>
     public sealed class NamedPipeEndPoint : EndPoint
@@ -124,7 +124,7 @@ switch (Transport)
 }
 ```
 
-文件顶部补 `using Microsoft.Extensions.Hosting.Net;`。`Clone()` 使用 `MemberwiseClone`，无需额外复制枚举值；确认 `Transport` 被保留。
+文件顶部补 `using Galosys.Foundation.Channel;`。`Clone()` 使用 `MemberwiseClone`，无需额外复制枚举值；确认 `Transport` 被保留。
 
 Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors；现有 TCP options 测试仍通过。
@@ -134,8 +134,8 @@ Expected: 0 errors；现有 TCP options 测试仍通过。
 - [ ] 2.1 增加 internal `IChannelListenerFactory` 与解析器
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/IChannelListenerFactory.cs`
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/SocketChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/IChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/SocketChannelListenerFactory.cs`
 
 **Step 1: 契约**
 
@@ -143,7 +143,7 @@ Expected: 0 errors；现有 TCP options 测试仍通过。
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     internal interface IChannelListenerFactory
     {
@@ -161,7 +161,7 @@ namespace Microsoft.Extensions.Hosting.Net
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     internal sealed class SocketChannelListenerFactory : IChannelListenerFactory
     {
@@ -190,7 +190,7 @@ Expected: 0 errors。
 - [ ] 3.1 创建 `NamedPipeChannelConnection` 的属性与 Pipe 组合
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelConnection.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelConnection.cs`
 
 **Step 1: 写入连接骨架**
 
@@ -202,7 +202,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     internal sealed class NamedPipeChannelConnection : IChannelConnection
     {
@@ -260,7 +260,7 @@ Expected: 0 errors（`IChannelConnection` 还缺 `Abort`/`DisposeAsync` 时会�
 - [ ] 3.2 实现 `Abort` 与 `DisposeAsync`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelConnection.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelConnection.cs`
 
 **Step 1: 增加幂等字段**
 
@@ -345,9 +345,9 @@ Expected: 0 errors。
 - [ ] 4.1 实现 `NamedPipeChannelListener.BindAsync` 与 pending 实例
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListener.cs`
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListenerFactory.cs`
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/ChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelListener.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Transports/ChannelListenerFactory.cs`
 
 **Step 1: 写入 listener 骨架**
 
@@ -357,7 +357,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     internal sealed class NamedPipeChannelListener : IChannelListener
     {
@@ -480,7 +480,7 @@ Expected: 0 errors（`AcceptAsync`/`UnbindAsync` 尚未实现时继续 4.2）。
 - [ ] 4.2 实现 `AcceptAsync`、`UnbindAsync` 与 `DisposeAsync`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListener.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Transports/NamedPipeChannelListener.cs`
 
 **Step 1: 实现 accept**
 
@@ -555,7 +555,7 @@ Expected: 0 errors。
 - [ ] 4.3 让 `ChannelServerCore` 通过工厂绑定 listener
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/ChannelServerCore.cs`
 
 **Step 1: 增加字段并在构造函数解析**
 
@@ -601,7 +601,7 @@ Expected: TCP 生命周期测试全部通过。
 
 ```csharp
 using System.IO.Pipes;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;
@@ -702,7 +702,7 @@ internal static class NamedPipeTestSupport
 
 ```csharp
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;
@@ -983,11 +983,11 @@ public void TransportContracts_AreInternal()
 
     foreach (var name in new[]
     {
-        "Microsoft.Extensions.Hosting.Net.IChannelListener",
-        "Microsoft.Extensions.Hosting.Net.IChannelConnection",
-        "Microsoft.Extensions.Hosting.Net.IChannelListenerFactory",
-        "Microsoft.Extensions.Hosting.Net.NamedPipeChannelListener",
-        "Microsoft.Extensions.Hosting.Net.NamedPipeChannelConnection",
+        "Galosys.Foundation.Channel.IChannelListener",
+        "Galosys.Foundation.Channel.IChannelConnection",
+        "Galosys.Foundation.Channel.IChannelListenerFactory",
+        "Galosys.Foundation.Channel.NamedPipeChannelListener",
+        "Galosys.Foundation.Channel.NamedPipeChannelConnection",
     })
     {
         var type = assembly.GetType(name);

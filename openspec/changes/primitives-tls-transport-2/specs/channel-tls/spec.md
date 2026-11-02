@@ -37,7 +37,7 @@ The implementation SHALL provide a public sealed `ChannelTlsOptions` in `Microso
 
 ### Requirement: 服务端 UseTls 中间件
 
-The implementation SHALL provide a public `UseTls(this IChannelPipeline pipeline, ChannelTlsOptions options)` extension method in `Microsoft.Extensions.Hosting.Net`. The middleware MUST create and authenticate a server-side `TlsDuplexPipe` from `context.Transport` before invoking `next`, MUST replace the transport with `context.UseTransport(tlsPipe)` after a successful handshake, and MUST invoke `next` exactly once. The middleware MUST dispose the TLS wrapper in a `finally` block after the pipeline completes. It MUST NOT read business bytes, MUST NOT create a session, and MUST NOT fall back to plaintext.
+The implementation SHALL provide a public `UseTls(this IChannelPipeline pipeline, ChannelTlsOptions options)` extension method in `Galosys.Foundation.Channel`. The middleware MUST create and authenticate a server-side `TlsDuplexPipe` from `context.Transport` before invoking `next`, MUST replace the transport with `context.UseTransport(tlsPipe)` after a successful handshake, and MUST invoke `next` exactly once. The middleware MUST dispose the TLS wrapper in a `finally` block after the pipeline completes. It MUST NOT read business bytes, MUST NOT create a session, and MUST NOT fall back to plaintext.
 
 #### Scenario: TLS 回显
 

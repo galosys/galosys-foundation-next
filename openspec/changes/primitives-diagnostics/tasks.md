@@ -17,7 +17,7 @@
 
 **Files:**
 - Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelDiagnosticsOptions.cs`
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Diagnostics/ChannelDiagnostics.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Diagnostics/ChannelDiagnostics.cs`
 
 **Step 1: 选项类型**
 
@@ -48,7 +48,7 @@ namespace Microsoft.Extensions.Options
 **Step 2: 公共名称常量**
 
 ```csharp
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     /// <summary>Channel 的 ActivitySource/Meter 名称、活动和标签常量。</summary>
     public static class ChannelDiagnostics
@@ -89,7 +89,7 @@ Expected: 0 errors。
 - [ ] 1.2 增加 internal ActivitySource/Meter、instrument 与防空分配 helper
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Diagnostics/ChannelDiagnostics.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Diagnostics/ChannelDiagnostics.cs`
 
 **Step 1: 增加静态字段**
 
@@ -98,7 +98,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     public static partial class ChannelDiagnostics
     {
@@ -147,7 +147,7 @@ internal static string GetTransportName(EndPoint? endPoint)
         IPEndPoint => "tcp",
         null => "unknown",
         { } value when value.GetType().FullName
-            == "Microsoft.Extensions.Hosting.Net.NamedPipeEndPoint" => "namedpipe",
+            == "Galosys.Foundation.Channel.NamedPipeEndPoint" => "namedpipe",
         _ => "other",
     };
 
@@ -255,7 +255,7 @@ Expected: 0 errors（`MessageChannelOptions` 依赖 P2 已落地）。
 - [ ] 2.1 在 accept loop 增加接受/拒绝/错误指标
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/ChannelServerCore.cs`
 
 **Step 1: 缓存 transport 名称**
 
@@ -326,7 +326,7 @@ Expected: 0 errors。
 - [ ] 2.2 为每个连接创建 `ChannelServer.Connection` 活动与时长/活动连接数
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/ChannelServerCore.cs`
 
 **Step 1: 在 `ProcessConnectionAsync` 开头启动**
 
@@ -421,8 +421,8 @@ Expected: 0 errors。
 - [ ] 3.1 在 `ChannelSession<T>.ReadAsync` / `WriteAsync` 增加活动和消息指标
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Session/ChannelSession.cs`
-- Modify: `src/Galosys.Foundation.Channel/Session/ChannelContextSessionExtensions.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Session/ChannelSession.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Session/ChannelContextSessionExtensions.cs`
 
 **Step 1: session 保存协议名与诊断选项**
 
@@ -559,7 +559,7 @@ Expected: 0 errors。
 - [ ] 3.2 在 `IMessageFramer.Parse` 周围记录 framing 时长
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Channel/Session/ChannelSession.cs`
+- Modify: `src/Galosys.Foundation.Channel/Channel/Session/ChannelSession.cs`
 
 **Step 1: 只在有监听器时计时**
 
@@ -708,7 +708,7 @@ Expected: 0 errors。
 ```csharp
 using System.Net;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;
@@ -865,7 +865,7 @@ Expected: 三个服务端诊断测试通过；服务器在错误后仍能继续�
 
 ```csharp
 using System.Net;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;
@@ -954,7 +954,7 @@ Expected: 测试通过；`protocol=line`，读写方向都有计数。
 **Step 1: 测试守卫**
 
 ```csharp
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;

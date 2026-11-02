@@ -33,7 +33,7 @@ P5 的 diagnostics 必须满足两个约束：一是不能改变协议行为（�
 
 ### 1. 稳定名称与公共常量
 
-`ChannelDiagnostics` 是 public static 常量类，放在 `Microsoft.Extensions.Hosting.Net`：
+`ChannelDiagnostics` 是 public static 常量类，放在 `Galosys.Foundation.Channel`：
 
 ```csharp
 public static class ChannelDiagnostics
@@ -126,7 +126,7 @@ internal static string GetTransportName(EndPoint? endPoint)
         IPEndPoint => "tcp",
         null => "unknown",
         { } value when value.GetType().FullName
-            == "Microsoft.Extensions.Hosting.Net.NamedPipeEndPoint" => "namedpipe",
+            == "Galosys.Foundation.Channel.NamedPipeEndPoint" => "namedpipe",
         _ => "other",
     };
 ```

@@ -95,7 +95,7 @@ Expected: 0 errors（此时还没有基准类，BenchmarkSwitcher 可正常启�
 ```csharp
 // Infrastructure/LoopbackServer.cs
 using System.Net;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
@@ -136,7 +136,7 @@ internal sealed class LoopbackServer : IAsyncDisposable
 ```csharp
 // Infrastructure/EchoHandlers.cs
 using System.IO;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
 namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
@@ -238,7 +238,7 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
 namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
@@ -359,7 +359,7 @@ Expected: 0 errors。
 using System.Buffers;
 using BenchmarkDotNet.Attributes;
 using Galosys.Foundation.Channel.Benchmarks.Infrastructure;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
 namespace Galosys.Foundation.Channel.Benchmarks.Cases;
 
@@ -408,7 +408,7 @@ Expected: 0 errors。
 using System.Buffers;
 using BenchmarkDotNet.Attributes;
 using Galosys.Foundation.Channel.Benchmarks.Infrastructure;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
 namespace Galosys.Foundation.Channel.Benchmarks.Cases;
 

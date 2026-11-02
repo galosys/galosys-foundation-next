@@ -6,7 +6,7 @@
 
 ## What Changes
 
-- 新增 public `UseTls(this IChannelPipeline pipeline, ChannelTlsOptions options)` 扩展方法（`Microsoft.Extensions.Hosting.Net`）。
+- 新增 public `UseTls(this IChannelPipeline pipeline, ChannelTlsOptions options)` 扩展方法（`Galosys.Foundation.Channel`）。
 - 中间件在调用 `next` 前用 `TlsDuplexPipe.CreateAsync(..., isServer: true, ...)` 完成握手，成功后调用 `context.UseTransport(tlsPipe)`。
 - 中间件在 `finally` 中释放 `TlsDuplexPipe`；握手失败时不调用 `next`，异常交给 `ChannelServer` 中止连接。
 - 中间件只包装传输，不读取业务字节；握手超时复用 `ChannelTlsOptions.HandshakeTimeout`，连接关闭令牌参与取消。
@@ -27,7 +27,7 @@
 
 ## Impact
 
-- 代码：新增 `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Pipeline/TlsPipelineExtensions.cs`；修改 `src/Galosys.Foundation.Channel/README.md`。
+- 代码：新增 `src/Galosys.Foundation.Channel/Channel/Pipeline/TlsPipelineExtensions.cs`；修改 `src/Galosys.Foundation.Channel/README.md`。
 - 公共 API：新增 `UseTls` 扩展方法；`TlsDuplexPipe` 仍为 internal。
 - 测试：`tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs` 新增 TLS 服务端集成测试；复用 `TlsTestCertificates`。
 - 依赖：依赖 `primitives-tls-transport-1` 与 `primitives-server-composition-2`（测试使用 sealed `ChannelServer`）；不新增 NuGet 包。

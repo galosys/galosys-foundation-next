@@ -24,7 +24,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;
@@ -78,12 +78,12 @@ Expected: 编译失败，提示 `UseTls` 不存在（这是本任务的“红”
 - [ ] 1.2 新增 `TlsPipelineExtensions`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Pipeline/TlsPipelineExtensions.cs`
+- Create: `src/Galosys.Foundation.Channel/Channel/Pipeline/TlsPipelineExtensions.cs`
 
 ```csharp
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     /// <summary>TLS 服务端管线扩展。</summary>
     public static class TlsPipelineExtensions
