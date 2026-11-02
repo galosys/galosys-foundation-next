@@ -6,7 +6,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="Galosys.Foundation.Primitives.Tests" />
+		<InternalsVisibleTo Include="Galosys.Foundation.Channel.Tests" />
 	</ItemGroup>
 
 </Project>

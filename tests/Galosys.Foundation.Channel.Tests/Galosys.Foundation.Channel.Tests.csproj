@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
-		<RootNamespace>Galosys.Foundation.Primitives.Tests</RootNamespace>
+		<RootNamespace>Galosys.Foundation.Channel.Tests</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -14,7 +14,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Galosys.Foundation.Primitives\Galosys.Foundation.Primitives.csproj" />
+		<ProjectReference Include="..\..\src\Galosys.Foundation.Channel\Galosys.Foundation.Channel.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
