@@ -2,11 +2,11 @@
 
 P1/P2 的服务端和消息层只有 `ILogger` 日志，没有 trace 和 metrics：连接建立/关闭、accept 失败、消息读写量、framing 解析耗时都无法从 OpenTelemetry 或 `dotnet-counters` 观察，也无法把一次慢请求关联到具体连接和协议。P5 需要在不改变协议行为的前提下补上可观测性，并且在没有监听器时不能给热路径增加可测量开销。
 
-本 change 用稳定的 `ActivitySource` / `Meter` 名称 `Galosys.Foundation.Primitives` 为服务端连接生命周期、消息会话与 framing 增加活动、计数器、直方图和低基数标签；客户端重连指标因仓库当前没有 P4 客户端类型而明确不实现，避免留下未接线的死代码。
+本 change 用稳定的 `ActivitySource` / `Meter` 名称 `Galosys.Foundation.Channel` 为服务端连接生命周期、消息会话与 framing 增加活动、计数器、直方图和低基数标签；客户端重连指标因仓库当前没有 P4 客户端类型而明确不实现，避免留下未接线的死代码。
 
 ## What Changes
 
-- 新增 public `ChannelDiagnostics` 常量类：`SourceName` / `MeterName` 为 `Galosys.Foundation.Primitives`，并公开 activity 名、instrument 名和 tag 名。
+- 新增 public `ChannelDiagnostics` 常量类：`SourceName` / `MeterName` 为 `Galosys.Foundation.Channel`，并公开 activity 名、instrument 名和 tag 名。
 - 新增 public `ChannelDiagnosticsOptions`：默认不采集 `connection.id`、`remote.endpoint`、`message.size` 标签；`EnableSessionActivities` 默认开启，高吞吐场景可显式关闭每条消息的 activity，计数器和直方图仍保留。
 - `ChannelServerOptions` 增加 `Diagnostics`，并在 `Clone()` 中复制；`MessageChannelOptions` 增加 `Diagnostics` 与 `ProtocolName`，供 session 标注 `protocol` 标签。
 - 新增 internal `ActivitySource` / `Meter` 与 instrument：服务端连接活动、连接接受/拒绝/活动连接数/连接时长/accept 错误；session 读写计数器、消息大小直方图、framing 解析时长、session 错误。
@@ -30,7 +30,7 @@ P1/P2 的服务端和消息层只有 `ILogger` 日志，没有 trace 和 metrics
 
 - 代码：新增 `Microsoft/Extensions/Hosting/Net/Diagnostics/ChannelDiagnostics.cs`、`ChannelDiagnosticsOptions.cs`、`Diagnostics/DiagnosticsGuard.cs`（可选辅助）；修改 `ChannelServerOptions.cs`、`ChannelServerCore.cs`、`MessageChannelOptions.cs`、`ChannelSession.cs`、`ChannelContextSessionExtensions.cs`（若工厂需要传递协议名）。
 - 公共 API：新增 `ChannelDiagnostics` 常量与 `ChannelDiagnosticsOptions`；`ChannelServerOptions.Diagnostics`、`MessageChannelOptions.Diagnostics`/`ProtocolName` 为增量属性；无破坏性变更。
-- 测试：`tests/Galosys.Foundation.Primitives.Tests/` 增加 `DiagnosticsTestSupport.cs`、`ServerDiagnosticsTests.cs`、`SessionDiagnosticsTests.cs`、`DiagnosticsOverheadTests.cs`。
+- 测试：`tests/Galosys.Foundation.Channel.Tests/` 增加 `DiagnosticsTestSupport.cs`、`ServerDiagnosticsTests.cs`、`SessionDiagnosticsTests.cs`、`DiagnosticsOverheadTests.cs`。
 - 依赖：仅使用 .NET 10 内置的 `System.Diagnostics.DiagnosticSource`、`System.Diagnostics.Metrics`；不新增 NuGet 包，不引入 OpenTelemetry SDK。
 - 前置：需要 P1（服务端内核）、P1.5a（`ChannelServerCore`/`ChannelServer`）与 P2（`ChannelSession<T>`、framer/codec）已落地；P4 客户端不在依赖内。
-- 验证：`dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`、`dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~Diagnostics`、`openspec validate "primitives-diagnostics" --strict --no-interactive`。
+- 验证：`dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`、`dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~Diagnostics`、`openspec validate "primitives-diagnostics" --strict --no-interactive`。

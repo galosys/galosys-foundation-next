@@ -52,7 +52,7 @@ The implementation SHALL expose a public `ChannelTransportKind` with `Tcp` as th
 
 #### Scenario: 内部传输类型不进入公共 API
 
-- **WHEN** 反射扫描 `Galosys.Foundation.Primitives` 程序集的 public 类型和 public 成员
+- **WHEN** 反射扫描 `Galosys.Foundation.Channel` 程序集的 public 类型和 public 成员
 - **THEN** 不存在 public 的 `IChannelListener`、`IChannelConnection`、`IChannelListenerFactory`、`NamedPipeChannelListener` 或 `NamedPipeChannelConnection`
 - **AND** `NamedPipeEndPoint` 与 `ChannelTransportKind` 是 public，且只作为配置/端点类型出现
 
@@ -131,6 +131,6 @@ The NamedPipe transport SHALL be validated on Windows. Every automated NamedPipe
 
 #### Scenario: 文档说明平台限制
 
-- **WHEN** 阅读 Primitives README 的 NamedPipe 章节
+- **WHEN** 阅读 Channel README 的 NamedPipe 章节
 - **THEN** 可以看到 Windows 限定、唯一管道名要求和 `NamedPipeClientStream` 客户端示例
 - **AND** 文档明确说明 `RemoteEndPoint` 为 null 以及 TCP 专属选项在 NamedPipe 下被忽略

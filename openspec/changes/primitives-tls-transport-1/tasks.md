@@ -16,7 +16,7 @@
 - [x] 1.1 写 `ChannelTlsOptions` 失败测试 — 已实现并测试通过。
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/ChannelTlsOptionsTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/ChannelTlsOptionsTests.cs`
 
 **Step 1: 写入最小测试**
 
@@ -24,7 +24,7 @@
 using System.Net.Security;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class ChannelTlsOptionsTests
 {
@@ -48,13 +48,13 @@ public sealed class ChannelTlsOptionsTests
 
 **Step 2: 运行测试，确认编译失败**
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
 Expected: 编译失败，提示 `ChannelTlsOptions` 不存在（这是本任务的“红”）。
 
 - [x] 1.2 新增 `ChannelTlsOptions` 与校验 — 已实现并测试通过。
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelTlsOptions.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelTlsOptions.cs`
 
 ```csharp
 using System.Net.Security;
@@ -116,14 +116,14 @@ namespace Microsoft.Extensions.Options
 - [x] 1.3 新增测试证书生成器 — 已实现并测试通过。
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/TlsTestCertificates.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/TlsTestCertificates.cs`
 
 ```csharp
 using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 internal static class TlsTestCertificates
 {
@@ -151,7 +151,7 @@ internal static class TlsTestCertificates
 - [x] 1.4 补齐配置校验测试 — 已实现并测试通过。
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelTlsOptionsTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/ChannelTlsOptionsTests.cs`
 
 追加以下测试：
 
@@ -192,7 +192,7 @@ public void ValidateClient_Throws_WhenTargetHostMissing()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
 Expected: 全部 `ChannelTlsOptionsTests` 通过。
 
 ## 2. 双向管道与 `SslStream` 适配
@@ -200,7 +200,7 @@ Expected: 全部 `ChannelTlsOptionsTests` 通过。
 - [ ] 2.1 实现 `SslStreamDuplexPipe`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/SslStreamDuplexPipe.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/SslStreamDuplexPipe.cs`
 
 ```csharp
 using System.IO.Pipelines;
@@ -273,7 +273,7 @@ namespace Microsoft.Extensions.Hosting.Net
 - [ ] 2.2 实现 `TlsDuplexPipe` 握手与读泵
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/TlsDuplexPipe.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/TlsDuplexPipe.cs`
 
 ```csharp
 using System.IO.Pipelines;
@@ -391,7 +391,7 @@ namespace Microsoft.Extensions.Hosting.Net
 - [ ] 2.3 实现写泵、`close_notify` 与释放
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/TlsDuplexPipe.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/TlsDuplexPipe.cs`
 
 把 `WritePumpAsync` 与 `DisposeAsync` 替换为：
 
@@ -469,10 +469,10 @@ public async ValueTask DisposeAsync()
 
 - [ ] 2.4 构建并跑配置/适配器测试
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~ChannelTlsOptionsTests"`
 Expected: 全部通过。
 
 ## 3. 握手与关闭测试
@@ -480,7 +480,7 @@ Expected: 全部通过。
 - [ ] 3.1 增加服务端/客户端握手回显测试
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/TlsDuplexPipeTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
 
 ```csharp
 using System.Net;
@@ -492,7 +492,7 @@ using System.Text;
 using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class TlsDuplexPipeTests
 {
@@ -611,13 +611,13 @@ internal sealed class TlsTestPair : IAsyncDisposable
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~TlsDuplexPipeTests"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~TlsDuplexPipeTests"`
 Expected: `CreateAsync_ServerAndClient_HandshakeAndEcho` 通过。
 
 - [ ] 3.2 增加证书拒绝测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsDuplexPipeTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
 
 ```csharp
 [Fact]
@@ -642,13 +642,13 @@ public async Task CreateAsync_ClientRejectsCertificate_ThrowsAuthenticationExcep
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~CreateAsync_ClientRejectsCertificate"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CreateAsync_ClientRejectsCertificate"`
 Expected: 测试通过；异常类型为 `AuthenticationException`。
 
 - [ ] 3.3 增加明文连接拒绝测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsDuplexPipeTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
 
 ```csharp
 [Fact]
@@ -679,13 +679,13 @@ public async Task CreateAsync_ServerRejectsClearTextBytes()
 
 把 `Assert.ThrowsAnyAsync<Exception>` 替换为 `Assert.ThrowsAnyAsync<IOException>` 或 `AuthenticationException` 的具体断言，取决于本机 `SslStream` 的异常包装；测试必须至少断言异常不是“成功返回”。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~CreateAsync_ServerRejectsClearTextBytes"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CreateAsync_ServerRejectsClearTextBytes"`
 Expected: 测试通过；服务端不会返回可用 `TlsDuplexPipe`。
 
 - [ ] 3.4 增加握手超时与外部取消测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsDuplexPipeTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
 
 ```csharp
 [Fact]
@@ -736,13 +736,13 @@ public async Task CreateAsync_ExternalCancellation_ThrowsOperationCanceledExcept
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~CreateAsync_HandshakeTimeout|FullyQualifiedName~CreateAsync_ExternalCancellation"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CreateAsync_HandshakeTimeout|FullyQualifiedName~CreateAsync_ExternalCancellation"`
 Expected: 两个测试通过。
 
 - [ ] 3.5 增加优雅关闭、刷新与半关闭测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsDuplexPipeTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
 
 ```csharp
 [Fact]
@@ -792,15 +792,15 @@ public async Task ClientHalfClose_ServerCanStillRespond()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~DisposeAsync_DrainsCommittedOutput|FullyQualifiedName~ClientHalfClose_ServerCanStillRespond"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~DisposeAsync_DrainsCommittedOutput|FullyQualifiedName~ClientHalfClose_ServerCanStillRespond"`
 Expected: 两个测试通过；1 MiB 数据顺序一致，客户端半关闭后仍能收到 `ok`。
 
 ## 4. 文档与验证
 
-- [ ] 4.1 更新 Primitives README 的 TLS 章节
+- [ ] 4.1 更新 Channel README 的 TLS 章节
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/README.md`
+- Modify: `src/Galosys.Foundation.Channel/README.md`
 
 增加：
 
@@ -828,12 +828,12 @@ internal `TlsDuplexPipe.CreateAsync(inner, tls, isServer, ct)` 在现有 `IDuple
 本阶段不提供 `UseTls`，也不做同端口 ALPN。管线接入见 `primitives-tls-transport-2`。
 ```
 
-- [ ] 4.2 跑 Primitives 构建与全量测试
+- [ ] 4.2 跑 Channel 构建与全量测试
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 现有测试与新增 `ChannelTlsOptionsTests` / `TlsDuplexPipeTests` 全部通过。
 
 - [ ] 4.3 校验 OpenSpec artifact

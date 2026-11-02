@@ -126,8 +126,8 @@ pipeline.Run(handler);
 1. 新增 `TlsPipelineExtensions`，先在测试中确认 `UseTls` 不存在时编译失败。
 2. 用 `ChannelServer` + `UseTls` + echo handler 写首个 TLS 回显测试，确认握手、替换传输和释放顺序。
 3. 补证书拒绝、明文拒绝、顺序、停机和 ALPN 测试。
-4. 更新 Primitives README 的管线章节，加入 `UseTls` 示例和顺序约束；sample 保持明文。
-5. 跑 Primitives 构建与全量测试；若失败，回滚新增扩展方法和测试/README，TLS 适配器保持不变。
+4. 更新 Channel README 的管线章节，加入 `UseTls` 示例和顺序约束；sample 保持明文。
+5. 跑 Channel 构建与全量测试；若失败，回滚新增扩展方法和测试/README，TLS 适配器保持不变。
 
 ## Open Questions
 

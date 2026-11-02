@@ -7,7 +7,7 @@
 
 ### Requirement: 客户端工厂契约
 
-The implementation SHALL provide a public `IChannelClientFactory` in `Microsoft.Extensions.Hosting.Net` with `IChannelClient Create(ChannelClientOptions options)` and a public sealed `ChannelClientFactory`. `Create` MUST reject null options with `ArgumentNullException` and MUST return a new client instance on every call; option validation remains the client constructor's responsibility.
+The implementation SHALL provide a public `IChannelClientFactory` in `Galosys.Foundation.Channel` with `IChannelClient Create(ChannelClientOptions options)` and a public sealed `ChannelClientFactory`. `Create` MUST reject null options with `ArgumentNullException` and MUST return a new client instance on every call; option validation remains the client constructor's responsibility.
 
 #### Scenario: 默认工厂每次创建新客户端
 

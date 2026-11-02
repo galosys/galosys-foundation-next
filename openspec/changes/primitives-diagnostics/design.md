@@ -13,7 +13,7 @@ P5 的 diagnostics 必须满足两个约束：一是不能改变协议行为（�
 
 **Goals:**
 
-- 用稳定名称 `Galosys.Foundation.Primitives` 提供 `ActivitySource` 与 `Meter`。
+- 用稳定名称 `Galosys.Foundation.Channel` 提供 `ActivitySource` 与 `Meter`。
 - 为服务端连接生命周期、session 读写、framing 解析提供活动、计数器、直方图和 UpDownCounter。
 - 定义低基数标签集合；`connection.id`、`remote.endpoint`、`message.size` 作为可选标签，默认关闭。
 - 用 `ActivitySource.HasListeners()` 与 `Instrument.Enabled` 守卫，未附加监听器时不创建 tag 集合、不记录测量。
@@ -38,8 +38,8 @@ P5 的 diagnostics 必须满足两个约束：一是不能改变协议行为（�
 ```csharp
 public static class ChannelDiagnostics
 {
-    public const string SourceName = "Galosys.Foundation.Primitives";
-    public const string MeterName = "Galosys.Foundation.Primitives";
+    public const string SourceName = "Galosys.Foundation.Channel";
+    public const string MeterName = "Galosys.Foundation.Channel";
 
     public const string ServerConnectionActivity = "ChannelServer.Connection";
     public const string SessionReadActivity = "ChannelSession.Read";
@@ -198,8 +198,8 @@ if (!SessionMessages.Enabled)
 4. 在 `ChannelSession<T>` 的 `ReadAsync`/`WriteAsync`、`IMessageFramer.Parse` 周围加入 activity、counter、histogram。
 5. 让 `AsJsonSession`/`AsLineTextSession`/`AsSession` 传递 `ProtocolName`；默认 `"custom"`。
 6. 增加 `DiagnosticsTestSupport` 与四组测试；先跑服务端，再跑 session，最后跑 overhead。
-7. 更新 Primitives README 的可观测性章节，加入监听器配置、指标/标签表、客户端指标后置说明。
-8. 构建 Primitives、跑 `Diagnostics` 过滤测试、跑全量测试与 `openspec validate`。
+7. 更新 Channel README 的可观测性章节，加入监听器配置、指标/标签表、客户端指标后置说明。
+8. 构建 Channel、跑 `Diagnostics` 过滤测试、跑全量测试与 `openspec validate`。
 
 回滚策略：删除 diagnostics 文件与 options 属性，移除 core/session 中的 helper 调用；协议代码本身没有被修改，回滚不影响连接行为。若只想关闭 session activity，可保留代码并设 `EnableSessionActivities=false`，无需回滚。
 

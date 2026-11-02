@@ -2,17 +2,17 @@
 
 ### Requirement: 独立可复现的基准项目
 
-The repository SHALL provide a standalone BenchmarkDotNet project at `benchmarks/Galosys.Foundation.Primitives.Benchmarks/`, targeting `net10.0` and referencing `src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`. The project MUST build and run independently in `Release` without building `Galosys.Foundation.Next.slnx`. The BenchmarkDotNet package version MUST be pinned. The project MUST NOT be added to the broken solution file, and generated `BenchmarkDotNet.Artifacts/` output MUST NOT be committed.
+The repository SHALL provide a standalone BenchmarkDotNet project at `benchmarks/Galosys.Foundation.Channel.Benchmarks/`, targeting `net10.0` and referencing `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`. The project MUST build and run independently in `Release` without building `Galosys.Foundation.Next.slnx`. The BenchmarkDotNet package version MUST be pinned. The project MUST NOT be added to the broken solution file, and generated `BenchmarkDotNet.Artifacts/` output MUST NOT be committed.
 
 #### Scenario: Release 独立构建
 
-- **WHEN** 执行 `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+- **WHEN** 执行 `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 - **THEN** 命令以 0 errors 结束
 - **AND** 不要求先构建 `Galosys.Foundation.Nats.Net` 或整个 `.slnx`
 
 #### Scenario: 冒烟运行
 
-- **WHEN** 执行 `dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry`
+- **WHEN** 执行 `dotnet run --project benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry`
 - **THEN** BenchmarkDotNet 启动并执行选中的基准
 - **AND** 不产生可用于基线比较的统计结论
 

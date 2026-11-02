@@ -35,6 +35,7 @@
 		<PackageVersion Include="galosys.foundation.aspnetcore.dataprotection.freeredis" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.aspnetcore.dynamicapi" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.aspnetcore.securityheaders" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.channel" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.compliance" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.core" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.dapper" Version="$(MainVersion)" />

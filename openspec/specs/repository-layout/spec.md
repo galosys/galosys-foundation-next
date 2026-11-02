@@ -16,7 +16,7 @@
 #### Scenario: src 只包含 foundation 类库
 
 - **WHEN** 列出 `src/` 下的项目目录
-- **THEN** 仅包含 `Galosys.Foundation.Primitives`、`Galosys.Foundation.Doris`、`Galosys.Foundation.Nats.Net`
+- **THEN** 仅包含 `Galosys.Foundation.Channel`、`Galosys.Foundation.Doris`、`Galosys.Foundation.Nats.Net`
 - **AND** 不存在示例项目目录
 
 ### Requirement: 解决方案结构映射磁盘目录
@@ -44,12 +44,12 @@
 
 - **WHEN** 执行 `dotnet build samples/<Project>/<Project>.csproj`
 - **THEN** 除已知不可编译的 `NatsSample.ConsoleApp` 外，项目构建成功
-- **AND** `NetServer.ConsoleApp` 能解析 `Galosys.Foundation.Primitives` 项目引用
+- **AND** `NetServer.ConsoleApp` 能解析 `Galosys.Foundation.Channel` 项目引用
 
 #### Scenario: 测试项目引用保持不变
 
-- **WHEN** 执行 `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
-- **THEN** 测试项目仍通过 `..\..\src\Galosys.Foundation.Primitives\...` 解析被测项目
+- **WHEN** 执行 `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
+- **THEN** 测试项目仍通过 `..\..\src\Galosys.Foundation.Channel\...` 解析被测项目
 - **AND** 测试运行成功
 
 ### Requirement: 当前文档与命令使用新路径

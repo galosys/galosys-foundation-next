@@ -11,7 +11,7 @@ P1/P1.5 的服务端内核只支持 TCP：`ChannelServerCore` 在启动时直接
 - 新增 internal `NamedPipeChannelListener` 与 `NamedPipeChannelConnection`：使用 `NamedPipeServerStream`，通过 `PipeReader.Create` / `PipeWriter.Create` 接入现有 `DuplexPipe` 和 `IChannelConnection` 契约。
 - 复用 `ChannelServerCore` 现有的 accept loop、连接跟踪、每连接 `IServiceScope`、`MaxConnections`、优雅停机与取消逻辑；NamedPipe 连接同样创建 `ChannelContext`。
 - 新增 NamedPipe 测试：loopback 回显、两个并发客户端、管道名已被占用、优雅停机、取消、默认 TCP、非法传输/端点组合、公开程序集不泄漏 listener/connection 类型。
-- 更新 Primitives README，增加 NamedPipe 用法、Windows 限制、唯一管道名要求与 `NamedPipeClientStream` 客户端示例。
+- 更新 Channel README，增加 NamedPipe 用法、Windows 限制、唯一管道名要求与 `NamedPipeClientStream` 客户端示例。
 - 不修改 public `IChannelServer` / `ChannelContext` 契约；不新增 NamedPipe 客户端封装；不实现 Unix domain socket；不改变 TCP 行为。
 
 ## Capabilities
@@ -28,8 +28,8 @@ P1/P1.5 的服务端内核只支持 TCP：`ChannelServerCore` 在启动时直接
 
 - 代码：新增 `Microsoft/Extensions/Options/ChannelTransportKind.cs`、`Microsoft/Extensions/Hosting/Net/NamedPipeEndPoint.cs`、`Microsoft/Extensions/Hosting/Net/Transports/IChannelListenerFactory.cs`、`ChannelListenerFactory.cs`、`SocketChannelListenerFactory.cs`、`NamedPipeChannelListener.cs`、`NamedPipeChannelConnection.cs`；修改 `ChannelServerOptions.cs`、`ChannelServerCore.cs`。
 - 公共 API：新增 `ChannelTransportKind`、`NamedPipeEndPoint`、`ChannelServerOptions.Transport`；`IChannelServer`、`ChannelContext`、`ChannelServer` 无破坏性变更；`IChannelListener` / `IChannelConnection` / 具体 listener 与 connection 类型继续保持 internal。
-- 测试：`tests/Galosys.Foundation.Primitives.Tests/` 增加 `NamedPipeTransportTests.cs` 与 `NamedPipeTestSupport.cs`，并在 `NamespaceConventionTests.cs` 增加 internal 类型可见性断言。
+- 测试：`tests/Galosys.Foundation.Channel.Tests/` 增加 `NamedPipeTransportTests.cs` 与 `NamedPipeTestSupport.cs`，并在 `NamespaceConventionTests.cs` 增加 internal 类型可见性断言。
 - 依赖：不新增 NuGet 包；仅使用 .NET 10 的 `System.IO.Pipes`、`System.IO.Pipelines` 与现有依赖。
 - 平台：NamedPipe 服务端仅在 Windows 上验证；测试使用每次唯一的管道名，避免并行测试互相占用。
 - 前置：需要先应用 `primitives-server-composition-1`（`ChannelServerCore`、`ChannelServer`），本 change 不以当前仓库中的 `ChannelServerBase` 为最终落点。
-- 验证：`dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`、`dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`、`openspec validate "primitives-namedpipe" --strict --no-interactive`。
+- 验证：`dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`、`dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`、`openspec validate "primitives-namedpipe" --strict --no-interactive`。

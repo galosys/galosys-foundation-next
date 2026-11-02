@@ -16,8 +16,8 @@
 - [ ] 1.1 增加 `ChannelTransportKind` 与 `NamedPipeEndPoint`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelTransportKind.cs`
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/NamedPipeEndPoint.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelTransportKind.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/NamedPipeEndPoint.cs`
 
 **Step 1: 写入枚举**
 
@@ -81,13 +81,13 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 - [ ] 1.2 给 `ChannelServerOptions` 增加 `Transport` 与启动前校验
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelServerOptions.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelServerOptions.cs`
 
 **Step 1: 增加属性**
 
@@ -126,7 +126,7 @@ switch (Transport)
 
 文件顶部补 `using Microsoft.Extensions.Hosting.Net;`。`Clone()` 使用 `MemberwiseClone`，无需额外复制枚举值；确认 `Transport` 被保留。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors；现有 TCP options 测试仍通过。
 
 ## 2. Listener 工厂缝
@@ -134,8 +134,8 @@ Expected: 0 errors；现有 TCP options 测试仍通过。
 - [ ] 2.1 增加 internal `IChannelListenerFactory` 与解析器
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/IChannelListenerFactory.cs`
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/SocketChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/IChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/SocketChannelListenerFactory.cs`
 
 **Step 1: 契约**
 
@@ -182,7 +182,7 @@ namespace Microsoft.Extensions.Hosting.Net
 
 此时 `NamedPipeChannelListenerFactory` 尚不存在，先创建占位实现并抛 `NotSupportedException` 会导致后续任务返工；改为本任务只创建接口与 TCP 工厂，`ChannelListenerFactory` 的 NamedPipe 分支在 4.1 完成后接入。若编译器要求完整 switch，可暂时将 NamedPipe 分支指向 `SocketChannelListenerFactory.Instance`，并在 4.1 替换。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 ## 3. NamedPipe 连接
@@ -190,7 +190,7 @@ Expected: 0 errors。
 - [ ] 3.1 创建 `NamedPipeChannelConnection` 的属性与 Pipe 组合
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelConnection.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelConnection.cs`
 
 **Step 1: 写入连接骨架**
 
@@ -254,13 +254,13 @@ namespace Microsoft.Extensions.Hosting.Net
 
 `logger` 参数暂时保存到字段或用于后续 debug 日志；不要在构造函数中读取业务数据。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors（`IChannelConnection` 还缺 `Abort`/`DisposeAsync` 时会有错误，下一步补齐；若先报缺成员，继续 3.2 后再构建）。
 
 - [ ] 3.2 实现 `Abort` 与 `DisposeAsync`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelConnection.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelConnection.cs`
 
 **Step 1: 增加幂等字段**
 
@@ -337,7 +337,7 @@ public async ValueTask DisposeAsync()
 }
 ```
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 ## 4. NamedPipe 监听器
@@ -345,9 +345,9 @@ Expected: 0 errors。
 - [ ] 4.1 实现 `NamedPipeChannelListener.BindAsync` 与 pending 实例
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListener.cs`
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListenerFactory.cs`
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/ChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListener.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListenerFactory.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/ChannelListenerFactory.cs`
 
 **Step 1: 写入 listener 骨架**
 
@@ -474,13 +474,13 @@ internal static class ChannelListenerFactory
 
 `ChannelListenerFactory.cs` 还需要 `using Microsoft.Extensions.Options;`。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors（`AcceptAsync`/`UnbindAsync` 尚未实现时继续 4.2）。
 
 - [ ] 4.2 实现 `AcceptAsync`、`UnbindAsync` 与 `DisposeAsync`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListener.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/Transports/NamedPipeChannelListener.cs`
 
 **Step 1: 实现 accept**
 
@@ -549,13 +549,13 @@ public ValueTask DisposeAsync()
 
 `EnsurePending` 在持有 `_gate` 时被调用；如果把它改成 `lock` 内部再调用，确保没有重复加锁。`DisposePending` 同样在锁内执行。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 - [ ] 4.3 让 `ChannelServerCore` 通过工厂绑定 listener
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
 
 **Step 1: 增加字段并在构造函数解析**
 
@@ -583,10 +583,10 @@ var listener = await _listenerFactory
 
 不要改变 `LocalEndPoint` 赋值、`_stopping` 创建或 accept loop 启动顺序。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~ServerLifecycleTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~ServerLifecycleTests`
 Expected: TCP 生命周期测试全部通过。
 
 ## 5. NamedPipe 测试
@@ -594,8 +594,8 @@ Expected: TCP 生命周期测试全部通过。
 - [ ] 5.1 增加唯一管道名/客户端辅助与回显测试
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/NamedPipeTestSupport.cs`
-- Create: `tests/Galosys.Foundation.Primitives.Tests/NamedPipeTransportTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/NamedPipeTestSupport.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/NamedPipeTransportTests.cs`
 
 **Step 1: 测试辅助**
 
@@ -604,7 +604,7 @@ using System.IO.Pipes;
 using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 internal static class NamedPipeTestSupport
 {
@@ -705,7 +705,7 @@ using System.Text;
 using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class NamedPipeTransportTests
 {
@@ -736,13 +736,13 @@ public sealed class NamedPipeTransportTests
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~NamedPipeTransportTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~NamedPipeTransportTests`
 Expected: `StartAsync_BindsAndEchoes` 通过。
 
 - [ ] 5.2 增加两个并发客户端与 `MaxConnections` 测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/NamedPipeTransportTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/NamedPipeTransportTests.cs`
 
 **Step 1: 两个并发客户端**
 
@@ -807,13 +807,13 @@ public async Task MaxConnections_RejectsSecondNamedPipeClient()
 
 `HoldUntilClosedAsync` 只等待 `context.ConnectionClosed`；`DisposeAsync` 会中止连接并释放它。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~NamedPipeTransportTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~NamedPipeTransportTests`
 Expected: 两个新测试与回显测试全部通过。
 
 - [ ] 5.3 增加管道名占用测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/NamedPipeTransportTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/NamedPipeTransportTests.cs`
 
 **Step 1: 用单实例 blocker 占用管道名**
 
@@ -845,13 +845,13 @@ public async Task StartAsync_Throws_WhenPipeNameIsInUse()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~StartAsync_Throws_WhenPipeNameIsInUse`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~StartAsync_Throws_WhenPipeNameIsInUse`
 Expected: 测试通过；启动失败后 `LocalEndPoint` 为 null。
 
 - [ ] 5.4 增加优雅停机与取消测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/NamedPipeTransportTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/NamedPipeTransportTests.cs`
 
 **Step 1: 优雅停机**
 
@@ -908,14 +908,14 @@ public async Task RunAsync_Cancel_StopsServer()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~NamedPipeTransportTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~NamedPipeTransportTests`
 Expected: 停机与取消测试通过，且不会留下后台 accept loop。
 
 - [ ] 5.5 增加传输选择/校验测试与 internal 类型断言
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/NamedPipeTransportTests.cs`
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/NamespaceConventionTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/NamedPipeTransportTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/NamespaceConventionTests.cs`
 
 **Step 1: 选择与校验测试**
 
@@ -998,15 +998,15 @@ public void TransportContracts_AreInternal()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~NamedPipeTransportTests|FullyQualifiedName~NamespaceConventionTests"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~NamedPipeTransportTests|FullyQualifiedName~NamespaceConventionTests"`
 Expected: 全部通过；`IChannelListenerFactory` 等类型不是 public。
 
 ## 6. 文档与验证
 
-- [ ] 6.1 更新 Primitives README 的 NamedPipe 用法
+- [ ] 6.1 更新 Channel README 的 NamedPipe 用法
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/README.md`
+- Modify: `src/Galosys.Foundation.Channel/README.md`
 
 在“配置”章节后增加：
 
@@ -1045,15 +1045,15 @@ await client.ConnectAsync(cancellationToken);
 - 需要两个客户端并发连接时，listener 会预创建两个 pending 实例；无需调用方额外配置。
 ```
 
-Run: `Select-String -Path src/Galosys.Foundation.Primitives/README.md -Pattern "命名管道"`
+Run: `Select-String -Path src/Galosys.Foundation.Channel/README.md -Pattern "命名管道"`
 Expected: 能匹配到新增章节标题。
 
 - [ ] 6.2 构建、跑全量测试并校验 OpenSpec
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 既有测试与全部 `NamedPipeTransportTests` 通过。
 
 Run: `openspec validate "primitives-namedpipe" --strict --no-interactive`

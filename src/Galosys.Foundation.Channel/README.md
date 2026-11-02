@@ -1,6 +1,8 @@
-# Galosys.Foundation.Primitives
+# Galosys.Foundation.Channel
 
-socket 传输层的最小基架（服务端 + 单连接客户端）：核心类型位于 `Microsoft.Extensions.Hosting.Net`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup` 与多服务器宿主注册；P4-1 增加单连接 `ChannelClient`；P4-2 增加重连与指数退避；P4-3 增加连接池与批量写入。
+逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端。核心类型位于 `Galosys.Foundation.Channel`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup` 与多服务器宿主注册；P4-1 增加单连接 `ChannelClient`；P4-2 增加重连与指数退避；P4-3 增加连接池与批量写入。
+
+> 本库的 Channel 指网络通道（逻辑通道 + 消息边界），与 `System.Threading.Channels.Channel<T>` 的进程内生产者-消费者队列无关。
 
 ## 能力
 
@@ -390,8 +392,8 @@ var server = new ChannelServer(
 ## 构建与测试
 
 ```powershell
-dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj
-dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj
+dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj
+dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj
 ```
 
 `Galosys.Foundation.Next.slnx` 因包含无法编译的 `Galosys.Foundation.Nats.Net`，不参与本项目验证。

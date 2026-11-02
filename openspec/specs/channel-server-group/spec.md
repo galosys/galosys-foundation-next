@@ -7,7 +7,7 @@
 
 ### Requirement: 组构造与服务器集合
 
-`ChannelServerGroup` MUST be a public sealed type in `Microsoft.Extensions.Hosting.Net` implementing `IAsyncDisposable` and `IDisposable`. The constructor MUST accept `params IChannelServer[] servers`, reject a null array or null element, defensively copy the array, and expose `IReadOnlyList<IChannelServer> Servers`. An empty group MUST be valid, and the group MUST NOT alter a server's options, `LocalEndPoint`, connection handling, or `ShutdownTimeout`.
+`ChannelServerGroup` MUST be a public sealed type in `Galosys.Foundation.Channel` implementing `IAsyncDisposable` and `IDisposable`. The constructor MUST accept `params IChannelServer[] servers`, reject a null array or null element, defensively copy the array, and expose `IReadOnlyList<IChannelServer> Servers`. An empty group MUST be valid, and the group MUST NOT alter a server's options, `LocalEndPoint`, connection handling, or `ShutdownTimeout`.
 
 #### Scenario: 两个服务器同时监听
 
@@ -107,7 +107,7 @@
 
 ### Requirement: 宿主集成
 
-`ChannelServerGroupHostedService` MUST host a `ChannelServerGroup` by forwarding `IHostedService.StartAsync` with the host token, `StopAsync` as `ChannelServerGroup.StopAsync(CancellationToken.None)`, and `IAsyncDisposable.DisposeAsync` to the group. It MUST NOT change the group's ordering, rollback, aggregation, or idempotence semantics; start failures propagate unchanged, and stop failures surface as the group's `AggregateException`.
+`ChannelServerGroupHostedService` MUST be a public sealed type in `Microsoft.Extensions.Hosting` and MUST host a `ChannelServerGroup` by forwarding `IHostedService.StartAsync` with the host token, `StopAsync` as `ChannelServerGroup.StopAsync(CancellationToken.None)`, and `IAsyncDisposable.DisposeAsync` to the group. It MUST NOT change the group's ordering, rollback, aggregation, or idempotence semantics; start failures propagate unchanged, and stop failures surface as an `AggregateException`.
 
 #### Scenario: 宿主启停映射到组
 

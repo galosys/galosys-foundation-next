@@ -1,13 +1,13 @@
-# Primitives 性能基线 Implementation Plan
+# Channel 性能基线 Implementation Plan
 
 > **REQUIRED SUB-SKILL:** 使用 `executing-plans` 或 `opsx-apply-x` 逐任务执行本计划。
 > 本仓库虽有 git，但按约定不自动提交；步骤中的“验证”统一用构建、冒烟运行与 OpenSpec 校验，不执行 git commit。
 
 **Goal:** 新建独立的 BenchmarkDotNet 工程，覆盖回显传输、framing、JSON codec 与 session 往返四类场景，提供可复现的手动基线、结果记录模板和优化决策门；不修改任何生产代码，不设 CI 门禁。
 
-**Architecture:** `benchmarks/Galosys.Foundation.Primitives.Benchmarks/` 引用 Primitives，用 `LoopbackServer` 在进程内启动绑定 `127.0.0.1:0` 的 `ChannelServer`，`RawEchoClient`/`SessionEchoClient` 建立持久连接；benchmark 类只负责参数化与调用，缓冲在 `[GlobalSetup]` 创建并复用。服务端 session 场景使用 `AsJsonSession<EchoMessage>()`，客户端使用公共 `LengthPrefixedFramer` 与 `JsonMessageCodec<EchoMessage>`。
+**Architecture:** `benchmarks/Galosys.Foundation.Channel.Benchmarks/` 引用 Channel，用 `LoopbackServer` 在进程内启动绑定 `127.0.0.1:0` 的 `ChannelServer`，`RawEchoClient`/`SessionEchoClient` 建立持久连接；benchmark 类只负责参数化与调用，缓冲在 `[GlobalSetup]` 创建并复用。服务端 session 场景使用 `AsJsonSession<EchoMessage>()`，客户端使用公共 `LengthPrefixedFramer` 与 `JsonMessageCodec<EchoMessage>`。
 
-**Tech Stack:** .NET 10、BenchmarkDotNet 0.15.8、`System.Net.Sockets`、`System.IO.Pipelines`、`System.Text.Json`、`Galosys.Foundation.Primitives`（P1.5a + P2）。
+**Tech Stack:** .NET 10、BenchmarkDotNet 0.15.8、`System.Net.Sockets`、`System.IO.Pipelines`、`System.Text.Json`、`Galosys.Foundation.Channel`（P1.5a + P2）。
 
 ---
 
@@ -16,7 +16,7 @@
 - [ ] 1.1 创建 benchmark 项目文件
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj`
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -27,7 +27,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <RootNamespace>Galosys.Foundation.Primitives.Benchmarks</RootNamespace>
+    <RootNamespace>Galosys.Foundation.Channel.Benchmarks</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Galosys.Foundation.Primitives\Galosys.Foundation.Primitives.csproj" />
+    <ProjectReference Include="..\..\src\Galosys.Foundation.Channel\Galosys.Foundation.Channel.csproj" />
   </ItemGroup>
 
 </Project>
@@ -43,14 +43,14 @@
 
 不要把项目加入 `Galosys.Foundation.Next.slnx`；该解决方案当前不可构建。
 
-Run: `dotnet restore benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj`
+Run: `dotnet restore benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj`
 Expected: 还原成功，解析到 `BenchmarkDotNet 0.15.8`。
 
 - [ ] 1.2 增加程序入口与 payload 设施
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Program.cs`
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Infrastructure/BenchmarkPayload.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Program.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Infrastructure/BenchmarkPayload.cs`
 
 ```csharp
 // Program.cs
@@ -61,7 +61,7 @@ BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
 
 ```csharp
 // Infrastructure/BenchmarkPayload.cs
-namespace Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
 internal sealed record EchoMessage(int Id, string Text);
 
@@ -81,7 +81,7 @@ internal static class BenchmarkPayload
 }
 ```
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors（此时还没有基准类，BenchmarkSwitcher 可正常启动并提示没有基准）。
 
 ## 2. 回显基础设施
@@ -89,8 +89,8 @@ Expected: 0 errors（此时还没有基准类，BenchmarkSwitcher 可正常启�
 - [ ] 2.1 增加 loopback server 与两种 handler
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Infrastructure/LoopbackServer.cs`
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Infrastructure/EchoHandlers.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Infrastructure/LoopbackServer.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Infrastructure/EchoHandlers.cs`
 
 ```csharp
 // Infrastructure/LoopbackServer.cs
@@ -98,7 +98,7 @@ using System.Net;
 using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
 internal sealed class LoopbackServer : IAsyncDisposable
 {
@@ -138,7 +138,7 @@ internal sealed class LoopbackServer : IAsyncDisposable
 using System.IO;
 using Microsoft.Extensions.Hosting.Net;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
 internal static class EchoHandlers
 {
@@ -180,23 +180,23 @@ internal static class EchoHandlers
 }
 ```
 
-`RawAsync` 与现有 Primitives README 的回显循环一致；`JsonSessionAsync` 依赖 P2 的 `AsJsonSession<T>()` 与 `IChannelSession<T>.ReadAsync/WriteAsync`。
+`RawAsync` 与现有 Channel README 的回显循环一致；`JsonSessionAsync` 依赖 P2 的 `AsJsonSession<T>()` 与 `IChannelSession<T>.ReadAsync/WriteAsync`。
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors。
 
 - [ ] 2.2 增加原始 socket client 与 session client
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Infrastructure/RawEchoClient.cs`
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Infrastructure/SessionEchoClient.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Infrastructure/RawEchoClient.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Infrastructure/SessionEchoClient.cs`
 
 ```csharp
 // Infrastructure/RawEchoClient.cs
 using System.Net;
 using System.Net.Sockets;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
 internal sealed class RawEchoClient : IDisposable
 {
@@ -240,7 +240,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Hosting.Net;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+namespace Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
 internal sealed class SessionEchoClient : IDisposable
 {
@@ -299,7 +299,7 @@ internal sealed class SessionEchoClient : IDisposable
 
 文件顶部补 `using System.IO;`。`MaxMessageSize` 与 `MessageChannelOptions` 默认 1 MiB 对齐，避免 4 KiB 场景之外的缓冲扩容。
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors。
 
 ## 3. 基准场景
@@ -307,13 +307,13 @@ Expected: 0 errors。
 - [ ] 3.1 增加原始回显往返基准
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Benchmarks/EchoRoundTripBenchmarks.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Benchmarks/EchoRoundTripBenchmarks.cs`
 
 ```csharp
 using BenchmarkDotNet.Attributes;
-using Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+using Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Cases;
+namespace Galosys.Foundation.Channel.Benchmarks.Cases;
 
 [MemoryDiagnoser]
 public class EchoRoundTripBenchmarks
@@ -347,21 +347,21 @@ public class EchoRoundTripBenchmarks
 }
 ```
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors。
 
 - [ ] 3.2 增加 framing 解析与写入基准
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Benchmarks/FramingBenchmarks.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Benchmarks/FramingBenchmarks.cs`
 
 ```csharp
 using System.Buffers;
 using BenchmarkDotNet.Attributes;
-using Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+using Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 using Microsoft.Extensions.Hosting.Net;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Cases;
+namespace Galosys.Foundation.Channel.Benchmarks.Cases;
 
 [MemoryDiagnoser]
 public class FramingBenchmarks
@@ -396,21 +396,21 @@ public class FramingBenchmarks
 
 `_frame.Slice(4)` 去掉 `LengthPrefixedFramer` 默认的 4 字节大端长度头，只把 payload 交给 `WriteFrame`。
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors。
 
 - [ ] 3.3 增加 JSON codec 编解码基准
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Benchmarks/JsonCodecBenchmarks.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Benchmarks/JsonCodecBenchmarks.cs`
 
 ```csharp
 using System.Buffers;
 using BenchmarkDotNet.Attributes;
-using Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+using Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 using Microsoft.Extensions.Hosting.Net;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Cases;
+namespace Galosys.Foundation.Channel.Benchmarks.Cases;
 
 [MemoryDiagnoser]
 public class JsonCodecBenchmarks
@@ -446,19 +446,19 @@ public class JsonCodecBenchmarks
 
 `Decode` 使用 setup 阶段预编码的帧，不把编码时间混入解码测量；返回消息对象避免 JIT 消除调用。
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors。
 
 - [ ] 3.4 增加 session 往返基准
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/Benchmarks/SessionRoundTripBenchmarks.cs`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/Benchmarks/SessionRoundTripBenchmarks.cs`
 
 ```csharp
 using BenchmarkDotNet.Attributes;
-using Galosys.Foundation.Primitives.Benchmarks.Infrastructure;
+using Galosys.Foundation.Channel.Benchmarks.Infrastructure;
 
-namespace Galosys.Foundation.Primitives.Benchmarks.Cases;
+namespace Galosys.Foundation.Channel.Benchmarks.Cases;
 
 [MemoryDiagnoser]
 public class SessionRoundTripBenchmarks
@@ -492,7 +492,7 @@ public class SessionRoundTripBenchmarks
 
 服务端走 `AsJsonSession<EchoMessage>()`，客户端走同一组 framer/codec；持久连接在 setup 建立，因此结果不含 TCP 握手与 accept。
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors。
 
 ## 4. 文档与结果模板
@@ -500,12 +500,12 @@ Expected: 0 errors。
 - [ ] 4.1 编写 benchmark README
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/README.md`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/README.md`
 
 内容至少包含：
 
 ````markdown
-# Galosys.Foundation.Primitives Benchmarks
+# Galosys.Foundation.Channel Benchmarks
 
 可选的手动基准工程，不参与 CI，不作为发布门禁。
 
@@ -519,13 +519,13 @@ Expected: 0 errors。
 ## 命令
 
 ```powershell
-dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release
+dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release
 
 # 冒烟：只验证能启动与执行
-dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry
+dotnet run --project benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry
 
 # 完整基线（时间较长）
-dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release -- --filter "*"
+dotnet run --project benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release -- --filter "*"
 ```
 
 ## 场景
@@ -562,13 +562,13 @@ dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys
 超过 90 天、换机器或换 SDK 后必须重新记录。
 ````
 
-Run: `Test-Path benchmarks/Galosys.Foundation.Primitives.Benchmarks/README.md`
+Run: `Test-Path benchmarks/Galosys.Foundation.Channel.Benchmarks/README.md`
 Expected: `True`。
 
 - [ ] 4.2 编写结果记录模板
 
 **Files:**
-- Create: `benchmarks/Galosys.Foundation.Primitives.Benchmarks/results/README.md`
+- Create: `benchmarks/Galosys.Foundation.Channel.Benchmarks/results/README.md`
 
 ```markdown
 # 基准结果记录
@@ -608,7 +608,7 @@ Expected: `True`。
 - 不把本文件中的数字写成产品 SLA。
 ```
 
-Run: `Test-Path benchmarks/Galosys.Foundation.Primitives.Benchmarks/results/README.md`
+Run: `Test-Path benchmarks/Galosys.Foundation.Channel.Benchmarks/results/README.md`
 Expected: `True`。
 
 ## 5. 入口与验证
@@ -618,10 +618,10 @@ Expected: `True`。
 **Files:**
 - Modify: `README.md`
 
-在“项目一览”表格的 `tests/Galosys.Foundation.Primitives.Tests` 行之后增加：
+在“项目一览”表格的 `tests/Galosys.Foundation.Channel.Tests` 行之后增加：
 
 ```markdown
-| `benchmarks/Galosys.Foundation.Primitives.Benchmarks` | `benchmarks/Galosys.Foundation.Primitives.Benchmarks/` | 基准（BenchmarkDotNet） | 可选、手动运行；覆盖回显、framing、JSON codec 与 session；不参与 CI。 |
+| `benchmarks/Galosys.Foundation.Channel.Benchmarks` | `benchmarks/Galosys.Foundation.Channel.Benchmarks/` | 基准（BenchmarkDotNet） | 可选、手动运行；覆盖回显、framing、JSON codec 与 session；不参与 CI。 |
 ```
 
 在“构建、测试与运行”章节之后增加：
@@ -630,11 +630,11 @@ Expected: `True`。
 ### 性能基准（可选）
 
 ```powershell
-dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release
-dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry
+dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release
+dotnet run --project benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry
 ```
 
-完整运行时间较长，且结果依赖机器；见 [benchmark README](benchmarks/Galosys.Foundation.Primitives.Benchmarks/README.md)。
+完整运行时间较长，且结果依赖机器；见 [benchmark README](benchmarks/Galosys.Foundation.Channel.Benchmarks/README.md)。
 ````
 
 同时把“目录结构”表格补一行：
@@ -648,12 +648,12 @@ Expected: 能匹配到新增标题。
 
 - [ ] 5.2 Release 构建 benchmark 项目
 
-Run: `dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release`
+Run: `dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release`
 Expected: 0 errors；输出中的程序集目标为 `net10.0`。
 
 - [ ] 5.3 冒烟运行选中基准
 
-Run: `dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release -- --filter "*EchoRoundTrip*" --job dry`
+Run: `dotnet run --project benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release -- --filter "*EchoRoundTrip*" --job dry`
 Expected: BDN 执行 3 个 payload 参数各一次，输出 Dry 结果表；连接建立与清理无异常。
 
 - [ ] 5.4 OpenSpec 校验与改动范围检查
