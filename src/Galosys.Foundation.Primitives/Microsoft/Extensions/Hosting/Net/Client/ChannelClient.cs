@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -7,7 +8,13 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Hosting.Net
 {
-    /// <summary>基于 socket 的单连接客户端。</summary>
+    /// <summary>基于 socket 的单连接客户端，可选自动重连。</summary>
+    /// <remarks>
+    /// 本类型只负责建立、暴露、重连和关闭连接；消息收发通过
+    /// <see cref="ChannelContext"/> 的字节管道或 P2 session 完成。
+    /// 重连产生新的 <see cref="ChannelContext"/> 与 <c>ConnectionId</c>，
+    /// 断开期间不缓冲、不重放消息。连接池见 <see cref="ChannelClientPool"/>。
+    /// </remarks>
     public sealed class ChannelClient : IChannelClient
     {
         private static readonly TimeSpan CloseDrainTimeout = TimeSpan.FromSeconds(5);
@@ -19,12 +26,15 @@ namespace Microsoft.Extensions.Hosting.Net
         private ChannelConnectionState _state = ChannelConnectionState.Disconnected;
         private Task? _connectTask;
         private CancellationTokenSource? _connectCts;
-        private Task? _shutdownTask;
         private ChannelContext? _connection;
         private SocketChannelConnection? _transportConnection;
+        private Task? _shutdownTask;
         private int _disposed;
 
-        /// <summary>创建客户端；配置在构造时校验并克隆。</summary>
+        /// <summary>创建客户端并校验配置。</summary>
+        /// <param name="options">客户端配置；构造时会克隆。</param>
+        /// <exception cref="ArgumentNullException"><paramref name="options"/> 为 null。</exception>
+        /// <exception cref="ArgumentException">配置无效。</exception>
         public ChannelClient(ChannelClientOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
@@ -32,7 +42,7 @@ namespace Microsoft.Extensions.Hosting.Net
             _options.Validate();
         }
 
-        /// <summary>当前状态。</summary>
+        /// <inheritdoc />
         public ChannelConnectionState State
         {
             get
@@ -42,7 +52,7 @@ namespace Microsoft.Extensions.Hosting.Net
             }
         }
 
-        /// <summary>仅在 <see cref="ChannelConnectionState.Connected"/> 时非 null。</summary>
+        /// <inheritdoc />
         public ChannelContext? Connection
         {
             get
@@ -52,16 +62,19 @@ namespace Microsoft.Extensions.Hosting.Net
             }
         }
 
-        /// <summary>状态迁移事件；在锁外同步触发。</summary>
+        /// <inheritdoc />
         public event EventHandler<ChannelStateChangedEventArgs>? StateChanged;
 
-        /// <summary>建立连接；并发调用共享同一次尝试。</summary>
+        /// <inheritdoc />
         public async Task ConnectAsync(CancellationToken ct)
         {
-            if (_options.Tls is not null)
-                throw new NotSupportedException("客户端 TLS 尚未接入；等待 primitives-tls-transport-1/2 完成后再启用。");
-
             ct.ThrowIfCancellationRequested();
+
+            if (_options.Tls is not null)
+            {
+                throw new NotSupportedException(
+                    "客户端 TLS 尚未接入；等待 primitives-tls-transport-1/2 完成后再启用。");
+            }
 
             Task connectTask;
 
@@ -78,8 +91,7 @@ namespace Microsoft.Extensions.Hosting.Net
                 if (_connectTask is null)
                 {
                     _connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _closed.Token);
-                    _connectCts.CancelAfter(_options.ConnectTimeout);
-                    _connectTask = ConnectCoreAsync(_connectCts, ct);
+                    _connectTask = RunConnectOperationAsync(_connectCts, ct);
                 }
 
                 connectTask = _connectTask;
@@ -88,7 +100,7 @@ namespace Microsoft.Extensions.Hosting.Net
             await connectTask.WaitAsync(ct).ConfigureAwait(false);
         }
 
-        /// <summary>优雅关闭并进入终态。</summary>
+        /// <inheritdoc />
         public Task CloseAsync(CancellationToken ct)
         {
             lock (_gate)
@@ -98,7 +110,7 @@ namespace Microsoft.Extensions.Hosting.Net
             }
         }
 
-        /// <summary>幂等释放；与 <see cref="CloseAsync"/> 共用同一条收尾路径。</summary>
+        /// <inheritdoc />
         public async ValueTask DisposeAsync()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -107,9 +119,92 @@ namespace Microsoft.Extensions.Hosting.Net
             await CloseAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
-        private async Task ConnectCoreAsync(CancellationTokenSource cts, CancellationToken callerToken)
+        private async Task RunConnectOperationAsync(
+            CancellationTokenSource operationCts,
+            CancellationToken callerToken)
         {
             await Task.Yield();
+
+            var policy = _options.Reconnect;
+            var delay = policy?.InitialDelay ?? TimeSpan.Zero;
+            var retries = 0;
+
+            try
+            {
+                SetState(ChannelConnectionState.Connecting);
+
+                while (true)
+                {
+                    try
+                    {
+                        await ConnectOnceAsync(operationCts.Token, callerToken).ConfigureAwait(false);
+
+                        SetState(ChannelConnectionState.Connected);
+
+                        lock (_gate)
+                        {
+                            if (_state != ChannelConnectionState.Connected)
+                                throw new OperationCanceledException(_closed.Token);
+                        }
+
+                        ClearForegroundOperation(operationCts);
+                        WatchCompletion();
+                        return;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        var failure = ChannelConnectionFailure.FromException(ex);
+
+                        bool retry;
+                        try
+                        {
+                            retry = CanRetry(policy, failure);
+                        }
+                        catch (Exception policyEx)
+                        {
+                            var policyFailure = ChannelConnectionFailure.FromException(policyEx);
+                            SetState(ChannelConnectionState.Disconnected, policyFailure);
+                            throw;
+                        }
+
+                        if (!retry || (policy!.MaxAttempts != 0 && retries >= policy.MaxAttempts))
+                        {
+                            SetState(ChannelConnectionState.Disconnected, failure);
+                            throw;
+                        }
+
+                        SetState(ChannelConnectionState.Reconnecting, failure);
+                        await DelayBeforeRetryAsync(delay, operationCts.Token).ConfigureAwait(false);
+
+                        retries++;
+                        delay = ChannelReconnectPolicy.NextDelay(delay, policy);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (!_closed.IsCancellationRequested)
+                    SetState(ChannelConnectionState.Disconnected, CanceledFailure(operationCts.Token));
+
+                throw;
+            }
+            finally
+            {
+                ClearForegroundOperation(operationCts);
+                operationCts.Dispose();
+            }
+        }
+
+        private async Task ConnectOnceAsync(
+            CancellationToken operationToken,
+            CancellationToken callerToken)
+        {
+            using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(operationToken);
+            attemptCts.CancelAfter(_options.ConnectTimeout);
 
             Socket? socket = null;
             SocketChannelConnection? connection = null;
@@ -117,17 +212,9 @@ namespace Microsoft.Extensions.Hosting.Net
 
             try
             {
-                lock (_gate)
-                {
-                    if (_state == ChannelConnectionState.Closed)
-                        throw new OperationCanceledException(_closed.Token);
-                }
-
-                SetState(ChannelConnectionState.Connecting);
-
                 socket = CreateSocket(_options.EndPoint);
                 ApplySocketOptions(socket, _options);
-                await socket.ConnectAsync(_options.EndPoint, cts.Token).ConfigureAwait(false);
+                await socket.ConnectAsync(_options.EndPoint, attemptCts.Token).ConfigureAwait(false);
 
                 connection = new SocketChannelConnection(
                     socket,
@@ -147,56 +234,27 @@ namespace Microsoft.Extensions.Hosting.Net
 
                     _connection = context;
                     _transportConnection = connection;
+                    context = null;
+                    connection = null;
                 }
-
-                connection = null;
-                context = null;
-
-                SetState(ChannelConnectionState.Connected);
-                WatchCompletion();
             }
-            catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            catch (OperationCanceledException) when (attemptCts.IsCancellationRequested)
             {
-                var canceledByClose = _closed.IsCancellationRequested;
-                var canceledByCaller = callerToken.IsCancellationRequested && !canceledByClose;
-
-                var failure = canceledByClose
-                    ? new ChannelConnectionFailure(
-                        ChannelConnectionFailureKind.Canceled,
-                        new OperationCanceledException(_closed.Token))
-                    : canceledByCaller
-                        ? new ChannelConnectionFailure(
-                            ChannelConnectionFailureKind.Canceled,
-                            new OperationCanceledException(callerToken))
-                        : new ChannelConnectionFailure(
-                            ChannelConnectionFailureKind.TimedOut,
-                            new TimeoutException($"连接在 {_options.ConnectTimeout} 内未完成。"));
-
                 await CleanupAttemptAsync(socket, connection, context).ConfigureAwait(false);
 
-                if (!canceledByClose)
-                    SetState(ChannelConnectionState.Disconnected, failure);
-
-                throw failure.Exception;
-            }
-            catch (Exception ex)
-            {
-                var failure = ChannelConnectionFailure.FromException(ex);
-                await CleanupAttemptAsync(socket, connection, context).ConfigureAwait(false);
-                SetState(ChannelConnectionState.Disconnected, failure);
-                throw;
-            }
-            finally
-            {
-                lock (_gate)
+                if (operationToken.IsCancellationRequested
+                    || callerToken.IsCancellationRequested
+                    || _closed.IsCancellationRequested)
                 {
-                    if (ReferenceEquals(_connectCts, cts))
-                        _connectCts = null;
-
-                    _connectTask = null;
+                    throw new OperationCanceledException(operationToken);
                 }
 
-                cts.Dispose();
+                throw new TimeoutException($"连接在 {_options.ConnectTimeout} 内未完成。");
+            }
+            catch
+            {
+                await CleanupAttemptAsync(socket, connection, context).ConfigureAwait(false);
+                throw;
             }
         }
 
@@ -230,7 +288,7 @@ namespace Microsoft.Extensions.Hosting.Net
             {
                 _closed.Cancel();
             }
-            catch (ObjectDisposedException)
+            catch (Exception)
             {
             }
 
@@ -250,30 +308,32 @@ namespace Microsoft.Extensions.Hosting.Net
                 }
                 catch (Exception)
                 {
+                    // 连接尝试的失败已经通过状态事件发布；关闭路径只负责收尾。
                 }
             }
-
-            if (context is null)
-                return;
 
             using var drainCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             drainCts.CancelAfter(CloseDrainTimeout);
 
             try
             {
-                await context.DisposeAsync().AsTask().WaitAsync(drainCts.Token).ConfigureAwait(false);
+                if (context is not null)
+                    await context.DisposeAsync().AsTask().WaitAsync(drainCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                context.Abort(new OperationCanceledException("关闭等待被取消或超时。"));
+                context?.Abort(new OperationCanceledException("关闭等待被取消或超时。"));
 
-                try
+                if (context is not null)
                 {
-                    await context.DisposeAsync().AsTask()
-                        .WaitAsync(CloseDrainTimeout).ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
+                    try
+                    {
+                        await context.DisposeAsync().AsTask()
+                            .WaitAsync(CloseDrainTimeout).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
             }
         }
@@ -285,56 +345,215 @@ namespace Microsoft.Extensions.Hosting.Net
 
         private async Task WatchCompletionAsync()
         {
-            try
+            SocketChannelConnection? connection;
+            ChannelContext? context;
+
+            lock (_gate)
             {
-                // 先让出执行权，保证 ConnectAsync 调用方先观察到 Connected。
-                await Task.Yield();
+                connection = _transportConnection;
+                context = _connection;
+            }
 
-                SocketChannelConnection? connection;
-                ChannelContext? context;
+            if (connection is null || context is null)
+                return;
 
-                lock (_gate)
-                {
-                    if (_state != ChannelConnectionState.Connected)
-                        return;
+            await connection.Completion.ConfigureAwait(false);
 
-                    connection = _transportConnection;
-                    context = _connection;
-                }
-
-                if (connection is null || context is null)
+            lock (_gate)
+            {
+                if (_state != ChannelConnectionState.Connected || !ReferenceEquals(_connection, context))
                     return;
 
-                await connection.Completion.ConfigureAwait(false);
+                _connection = null;
+                _transportConnection = null;
+            }
 
-                lock (_gate)
-                {
-                    if (_state != ChannelConnectionState.Connected || !ReferenceEquals(_connection, context))
-                        return;
-
-                    _connection = null;
-                    _transportConnection = null;
-                }
-
-                try
-                {
-                    await context.DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                }
-
-                var error = connection.Termination.IsCompletedSuccessfully
-                    ? connection.Termination.Result
-                    : null;
-
-                SetState(
-                    ChannelConnectionState.Disconnected,
-                    error is null ? null : ChannelConnectionFailure.FromException(error));
+            try
+            {
+                await context.DisposeAsync().ConfigureAwait(false);
             }
             catch (Exception)
             {
-                // 观察器异常不得传播到未观察的任务。
+            }
+
+            var error = connection.Termination.IsCompletedSuccessfully
+                ? connection.Termination.Result
+                : null;
+
+            var failure = error is not null
+                ? ChannelConnectionFailure.FromException(error)
+                : new ChannelConnectionFailure(
+                    ChannelConnectionFailureKind.Network,
+                    new IOException("连接已由对端关闭。"));
+
+            if (_closed.IsCancellationRequested)
+                return;
+
+            bool retry;
+            try
+            {
+                retry = CanRetry(_options.Reconnect, failure);
+            }
+            catch (Exception policyEx)
+            {
+                SetState(
+                    ChannelConnectionState.Disconnected,
+                    ChannelConnectionFailure.FromException(policyEx));
+                return;
+            }
+
+            if (!retry || !StartBackgroundReconnect(failure))
+                SetState(ChannelConnectionState.Disconnected, failure);
+        }
+
+        private bool StartBackgroundReconnect(ChannelConnectionFailure failure)
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            ChannelStateChangedEventArgs? args;
+
+            lock (_gate)
+            {
+                if (_state == ChannelConnectionState.Closed || _connectTask is not null)
+                    return false;
+
+                args = new ChannelStateChangedEventArgs(
+                    _state,
+                    ChannelConnectionState.Reconnecting,
+                    failure);
+                _state = ChannelConnectionState.Reconnecting;
+                _connectTask = completion.Task;
+            }
+
+            RaiseStateChanged(args);
+            _ = completion.Task.ContinueWith(
+                static task => _ = task.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
+            _ = RunBackgroundReconnectAsync(failure, completion);
+            return true;
+        }
+
+        private async Task RunBackgroundReconnectAsync(
+            ChannelConnectionFailure lastFailure,
+            TaskCompletionSource completion)
+        {
+            await Task.Yield();
+
+            var policy = _options.Reconnect!;
+            var delay = policy.InitialDelay;
+            var retries = 0;
+
+            try
+            {
+                while (!_closed.IsCancellationRequested)
+                {
+                    await DelayBeforeRetryAsync(delay, _closed.Token).ConfigureAwait(false);
+                    retries++;
+
+                    try
+                    {
+                        await ConnectOnceAsync(_closed.Token, CancellationToken.None).ConfigureAwait(false);
+
+                        SetState(ChannelConnectionState.Connected);
+
+                        lock (_gate)
+                        {
+                            if (ReferenceEquals(_connectTask, completion.Task))
+                                _connectTask = null;
+                        }
+
+                        WatchCompletion();
+                        completion.TrySetResult();
+                        return;
+                    }
+                    catch (OperationCanceledException) when (_closed.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastFailure = ChannelConnectionFailure.FromException(ex);
+
+                        bool retry;
+                        try
+                        {
+                            retry = CanRetry(policy, lastFailure);
+                        }
+                        catch (Exception policyEx)
+                        {
+                            SetState(
+                                ChannelConnectionState.Disconnected,
+                                ChannelConnectionFailure.FromException(policyEx));
+                            completion.TrySetException(policyEx);
+                            return;
+                        }
+
+                        if (!retry || (policy.MaxAttempts != 0 && retries >= policy.MaxAttempts))
+                        {
+                            SetState(ChannelConnectionState.Disconnected, lastFailure);
+                            completion.TrySetException(lastFailure.Exception);
+                            return;
+                        }
+
+                        delay = ChannelReconnectPolicy.NextDelay(delay, policy);
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (_closed.IsCancellationRequested)
+            {
+                completion.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                SetState(
+                    ChannelConnectionState.Disconnected,
+                    ChannelConnectionFailure.FromException(ex));
+                completion.TrySetException(ex);
+            }
+            finally
+            {
+                lock (_gate)
+                {
+                    if (ReferenceEquals(_connectTask, completion.Task))
+                        _connectTask = null;
+                }
+            }
+        }
+
+        private async Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct)
+        {
+            var policy = _options.Reconnect!;
+            var jittered = ChannelReconnectPolicy.ApplyJitter(
+                delay,
+                policy.JitterSource(),
+                policy.JitterFactor);
+
+            await Task.Delay(jittered, _options.TimeProvider, ct).ConfigureAwait(false);
+        }
+
+        private static bool CanRetry(
+            ChannelReconnectPolicy? policy,
+            ChannelConnectionFailure failure)
+        {
+            if (policy is null)
+                return false;
+
+            return policy.ShouldRetry?.Invoke(failure.Exception) ?? failure.IsRetryable;
+        }
+
+        private static ChannelConnectionFailure CanceledFailure(CancellationToken ct)
+            => new(ChannelConnectionFailureKind.Canceled, new OperationCanceledException(ct));
+
+        private void ClearForegroundOperation(CancellationTokenSource operationCts)
+        {
+            lock (_gate)
+            {
+                if (ReferenceEquals(_connectCts, operationCts))
+                {
+                    _connectCts = null;
+                    _connectTask = null;
+                }
             }
         }
 

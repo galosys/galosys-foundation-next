@@ -2,7 +2,7 @@
 
 P1 的服务端已经把 socket 字节包装成 `IChannelConnection.Transport`，并交给 `ChannelContext`；P2 的 `IChannelSession<T>` 只消费 `ChannelContext.Reader/Writer`，不关心底层是 TCP 还是 TLS。设计文档 `2026-10-20-primitives-socket-transport-design.md` 在 §5.7 定义了客户端形态：连接级语义、`ConnectAsync` 幂等、`CloseAsync` 终态、消息收发走 `Connection.AsSession<T>()`。
 
-当前仓库只有 internal `ChannelClientBase` 空壳，它继承 `IChannelServer`，没有 socket、没有状态、没有关闭语义，也没有任何引用。本 change 先交付单连接客户端；重连、连接池和 batch 分别由 `primitives-client-2`、`primitives-client-3` 叠加。客户端 TLS 依赖 `primitives-tls-transport-1` 的 `TlsDuplexPipe`，测试依赖 `primitives-server-composition-2` 的 sealed `ChannelServer` 与迁移后的 `TestServer`。
+当前仓库只有 internal `ChannelClientBase` 空壳，它继承 `IChannelServer`，没有 socket、没有状态、没有关闭语义，也没有任何引用。本 change 先交付单连接客户端；重连、连接池和 batch 分别由 `primitives-client-2`、`primitives-client-3` 叠加。本 change 只提前复用 `primitives-tls-transport-1` 的 `ChannelTlsOptions` 配置类型，客户端 TLS 握手延后；测试依赖 `primitives-server-composition-2` 的 sealed `ChannelServer` 与迁移后的 `TestServer`。
 
 ## Goals / Non-Goals
 
@@ -10,10 +10,10 @@ P1 的服务端已经把 socket 字节包装成 `IChannelConnection.Transport`�
 
 - 提供 public `IChannelClient`、`ChannelClient`、`ChannelConnectionState`、`ChannelStateChangedEventArgs`、`ChannelConnectionFailure`。
 - 提供 public `ChannelClientOptions`（`Microsoft.Extensions.Options`），覆盖端点、连接超时、keep-alive、TLS 与 `TimeProvider`。
-- 连接成功后暴露一个 `ChannelContext`，其 `Reader`/`Writer` 是 TCP 或 TLS 解密后的字节管道；客户端不额外实现 `SendAsync` / `ReceiveAsync`。
+- 连接成功后暴露一个 `ChannelContext`，其 `Reader`/`Writer` 是 TCP 字节管道；客户端不额外实现 `SendAsync` / `ReceiveAsync`。
 - `ConnectAsync` 并发幂等；`CloseAsync` / `DisposeAsync` 到达终态 `Closed`，旧连接失效。
-- 连接失败可分类（拒绝、超时、TLS、取消、配置），为 P4 重连提供 `IsRetryable`。
-- 用真实 loopback socket 覆盖明文、TLS、失败、关闭和远端断开。
+- 连接失败可分类（拒绝、超时、取消、配置），为 P4 重连提供 `IsRetryable`。
+- 用真实 loopback socket 覆盖明文、失败、关闭和远端断开。
 
 **Non-Goals:**
 
@@ -21,6 +21,7 @@ P1 的服务端已经把 socket 字节包装成 `IChannelConnection.Transport`�
 - 不实现连接池、租借超时、健康检查。
 - 不实现批量写入或任何 session/codec/framer 逻辑；消息层通过 `Connection.AsSession<T>()` 在 P2 之后接入。
 - 不提供多 `EndPoint` 故障转移、Unix socket 专用配置、代理或 HTTP 升级。
+- 不实现客户端 TLS 握手；`ChannelClientOptions.Tls` 非空时 `ConnectAsync` 明确抛 `NotSupportedException`，由后续 change 接入。
 - 不在客户端启动后台读循环；读取由调用方通过 `Connection.Reader` 或 session 驱动。
 - 不改变服务端 `IChannelServer`、`ChannelContext`、`IChannelConnection` 的公开契约。
 
@@ -100,13 +101,12 @@ public sealed class ChannelConnectionFailure
 - 失败时先清理半成品 socket/connection/TLS，再发布 `Disconnected` 与 `Failure`，最后原样抛出异常。不会把 `ChannelContext` 暴露给调用方。
 - 本 change 不做自动重试；`ConnectAsync` 只执行一次尝试。P4 在失败分类之上叠加 `ChannelReconnectPolicy`。
 
-### 5. TLS 在暴露 `Connection` 之前完成
+### 5. TLS 配置保留、握手暂缓
 
-- `ChannelClientOptions.Tls` 非空时，在 `SocketChannelConnection` 建立后调用 `TlsDuplexPipe.CreateAsync(connection.Transport, tls, isServer: false, ct)`；握手失败立即释放连接，不发布 `Connected`。
-- 握手成功后先创建 `ChannelContext`，再调用 `context.UseTransport(tlsPipe)`；`ChannelClient` 单独持有 `TlsDuplexPipe` 引用。
-- `Connection` 的 `Reader`/`Writer` 因此直接是解密后的管道；调用方和 P2 session 不需要知道 TLS 存在。
-- 释放顺序固定为：`TlsDuplexPipe.DisposeAsync()`（排空输出并发送 `close_notify`）→ `ChannelContext.DisposeAsync()`（完成底层输出、释放 socket）。`ChannelContext` 不知道包装层，不能替客户端释放 TLS。
-- 未配置 TLS 时使用明文 `connection.Transport`，不做协议探测，也不在握手失败后回退明文。
+- 本 change 提前落地 `ChannelTlsOptions`（来自 `primitives-tls-transport-1` 的配置部分），使 `ChannelClientOptions.Tls` 的校验与公共契约稳定。
+- `Tls` 非空时，`ConnectAsync` 在创建 socket 与状态迁移之前抛 `NotSupportedException`；不会静默降级为明文，也不会留下半成品连接。
+- TLS 握手、`TlsDuplexPipe` 接线、`close_notify` 与释放顺序由后续 change 完成；届时删除守卫并补 TLS 回显/证书失败测试。
+- 未配置 TLS 时使用明文 `connection.Transport`，不做协议探测。
 
 ### 6. 用 internal `Completion` 观察远端结束
 
@@ -137,10 +137,9 @@ internal interface IChannelConnection : IAsyncDisposable
 
 - **`ConnectAsync` 首次调用者的取消会影响所有并发等待者** → 文档写明共享尝试语义；后续调用者可以用自己的 token 只取消等待。若需要“每个调用者独立取消且尝试继续”，放在 P4 的 manager 层解决。
 - **事件同步触发可能阻塞连接路径** → 订阅方必须快速返回；框架吞掉订阅方异常，避免状态机被破坏，但调用方无法从 `ConnectAsync` 看到订阅方错误。
-- **`ChannelContext` 不知道 TLS 包装层** → 客户端必须严格按 TLS → context 顺序释放；测试锁定关闭时数据排空与 `close_notify`。这是复用现有 context 的代价。
 - **远端半关闭被当作断开** → 连接级语义优先于半关闭复用；需要半关闭的协议应在消息层显式建模，而不是依赖客户端状态。
 - **`Completion` 是新增 internal 成员** → 只有 `SocketChannelConnection` 一个实现，修改面可控；不进入 public API。
-- **连接超时同时覆盖 TLS 握手** → 如果 `ChannelTlsOptions.HandshakeTimeout` 更短，以先到者为准；两个超时都表现为连接失败，调用方从异常类型区分。
+- **连接超时只覆盖 TCP 连接** → TLS 握手接入后需要重新审视 `ConnectTimeout` 与 `HandshakeTimeout` 的叠加关系。
 - **客户端没有 logger** → 本 change 不引入日志依赖；失败通过异常与 `StateChanged` 暴露。后续需要诊断时再增加 `ILoggerFactory` 可选参数。
 - **`EmptyServiceProvider` 没有业务服务** → 客户端 session 只能使用显式传入的 framer/codec；需要 DI 的 handler 风格客户端留给后续 change。
 
@@ -149,7 +148,7 @@ internal interface IChannelConnection : IAsyncDisposable
 1. 增加状态、事件、失败分类与 `ChannelClientOptions`，先用单元测试锁定默认值、校验和克隆语义。
 2. 给 `IChannelConnection` / `SocketChannelConnection` 增加 `Completion`，用现有传输测试确认不影响服务端关闭。
 3. 实现 `ChannelClient` 的 socket 连接、状态迁移、失败清理与 `ConnectAsync` 并发合并；跑通明文回显。
-4. 接入 `TlsDuplexPipe`，补 TLS 回显与证书失败测试。
+4. 保留 TLS 配置与守卫；TLS 握手、回显与证书失败测试移到后续 change。
 5. 实现 `CloseAsync` / `DisposeAsync`、watcher、旧连接失效测试。
 6. 删除 `ChannelClientBase.cs`，更新 Primitives README；跑构建、全量测试与 OpenSpec 校验。
 7. 若需要回滚：删除新增 Client 目录与 Options 文件、恢复 `ChannelClientBase.cs`、移除 `Completion` 成员即可；现有服务端代码不受影响。

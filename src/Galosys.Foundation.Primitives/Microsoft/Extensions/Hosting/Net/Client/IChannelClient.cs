@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Extensions.Hosting.Net
 {
-    /// <summary>单连接客户端契约；重连与连接池在后续 change 叠加。</summary>
+    /// <summary>单连接客户端契约；重连见本类型实现，连接池见 <see cref="ChannelClientPool"/>。</summary>
     public interface IChannelClient : IAsyncDisposable
     {
         /// <summary>当前状态。</summary>

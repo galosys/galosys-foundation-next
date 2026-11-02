@@ -109,15 +109,15 @@ private async Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct)
 - 只调用三参数 `Task.Delay(TimeSpan, TimeProvider, CancellationToken)`；库代码中不得再出现裸 `Task.Delay(TimeSpan, CancellationToken)` 用于退避。
 - 抖动在 `[1 - JitterFactor, 1 + JitterFactor]` 内；`JitterFactor = 0` 时可精确断言延迟。
 - `FakeTimeProvider.Advance` 触发延迟完成；测试不等待真实退避时间。
-- `ConnectTimeout` 仍按每次尝试计算，覆盖该次 TCP + TLS；退避时间不计入单次 `ConnectTimeout`。
+- `ConnectTimeout` 仍按每次尝试计算，覆盖该次 TCP 连接；退避时间不计入单次 `ConnectTimeout`。TLS 握手尚未接入，接入后握手时间也纳入该超时。
 
 ### 5. 失败分类与 `ShouldRetry`
 
 - 默认重试：`ConnectionRefused`、`TimedOut`、`HostUnreachable`、`Network`。
-- 默认不重试：`Authentication`（证书/协议配置错误）、`Canceled`（调用方关闭）、`Configuration`（选项错误）、`Unknown`。
+- 默认不重试：`Authentication`（认证或协议错误；TLS 握手接入后由证书失败产生）、`Canceled`（调用方关闭）、`Configuration`（选项错误）、`Unknown`。
 - `ShouldRetry` 非 null 时，以回调结果为准；回调抛出的异常不捕获，按当前重连操作的失败处理，避免策略异常被误判为可重试。
 - 远端正常 EOF 没有异常原因时，构造一个 `IOException("连接已由对端关闭。")` 的 `Network` 失败参与判断，使“正常关闭”也能按策略重连。
-- TLS 证书失败不会重连；测试锁定 `StateChanged` 不出现 `Reconnecting`。
+- TLS 握手尚未接入：`Tls` 非空时 `ConnectAsync` 在创建 socket 和状态迁移之前抛出 `NotSupportedException`；测试锁定 `StateChanged` 不出现 `Reconnecting`。TLS 证书失败分类在 `primitives-tls-transport-1/2` 接入握手后再覆盖。
 
 ### 6. 取消与关闭
 
@@ -131,7 +131,7 @@ private async Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct)
 - 使用 `Microsoft.Extensions.TimeProvider.Testing` 的 `FakeTimeProvider`，版本与测试项目其他 Microsoft.Extensions 包保持 10.x。
 - 服务端先关闭再启动，锁定“首次连接失败后重试成功”。
 - 服务端第一条连接主动 `Abort`，锁定“已连接后后台重连”。
-- TLS 证书拒绝、`ShouldRetry = _ => false`、`MaxAttempts` 耗尽锁定“不重试/停止”。
+- 配置 TLS 时直接抛 `NotSupportedException`、`ShouldRetry = _ => false`、`MaxAttempts` 耗尽锁定“不重试/停止”。
 - `CloseAsync` 在 `Reconnecting` 期间调用，推进假时钟后确认没有新连接。
 - 测试中的 `JitterFactor` 设为 0，避免随机延迟；另用一个 policy 单测验证抖动范围。
 
@@ -141,7 +141,7 @@ private async Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct)
 - **首次调用者取消会取消整个共享重试** → 与 P4-1 的共享尝试语义一致；并发调用者可用自己的 token 只取消等待。需要独立生命周期的场景由连接池/manager 层解决。
 - **断线后直接进入 `Reconnecting` 而不经过 `Disconnected`** → 减少状态噪音，但订阅方必须把 `Reconnecting` 当作“当前无连接”。`Connection` 为 null 已表达这一点。
 - **`ShouldRetry` 回调可能阻塞或抛异常** → 回调在重试循环内同步执行；文档要求快速、无阻塞。异常按当前尝试失败处理，不额外包装。
-- **假时钟与真实 socket 超时混用** → 退避完全用假时钟，TCP/TLS 超时仍用真实 `CancelAfter`；测试把 `ConnectTimeout` 设短，避免长时间等待。
+- **假时钟与真实 socket 超时混用** → 退避完全用假时钟，TCP 超时仍用真实 `CancelAfter`；测试把 `ConnectTimeout` 设短，避免长时间等待。
 - **后台重连与 `CloseAsync` 竞争** → 所有字段由 `_gate` 保护，关闭先置 `Closed` 再取消；重连每次尝试前检查状态。测试覆盖关闭后退避到期。
 - **重连不重放消息** → 调用方必须自行判断哪些请求需要重试；框架不提供“至少一次”语义，避免隐瞒重复发送风险。
 

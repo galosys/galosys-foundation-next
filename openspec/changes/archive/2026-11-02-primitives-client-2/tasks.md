@@ -13,7 +13,7 @@
 
 ## 1. 重连策略与选项
 
-- [ ] 1.1 增加测试包并写 `ChannelReconnectPolicy` 失败测试
+- [x] 1.1 增加测试包并写 `ChannelReconnectPolicy` 失败测试 — 已完成。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
@@ -72,7 +72,7 @@ public sealed class ChannelReconnectPolicyTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelReconnectPolicyTests"`
 Expected: 编译失败，提示 `ChannelReconnectPolicy` 不存在（这是本任务的“红”）。
 
-- [ ] 1.2 新增 `ChannelReconnectPolicy`
+- [x] 1.2 新增 `ChannelReconnectPolicy` — 已完成。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelReconnectPolicy.cs`
@@ -134,7 +134,7 @@ namespace Microsoft.Extensions.Options
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelReconnectPolicyTests"`
 Expected: 三个测试通过。
 
-- [ ] 1.3 给 `ChannelClientOptions` 增加 `Reconnect`
+- [x] 1.3 给 `ChannelClientOptions` 增加 `Reconnect` — 已完成。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelClientOptions.cs`
@@ -197,7 +197,7 @@ Expected: 全部通过。
 
 ## 2. 单次尝试与首次连接重试
 
-- [ ] 2.1 写首次连接重试失败测试
+- [x] 2.1 写首次连接重试失败测试 — 已完成。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ChannelReconnectTests.cs`
@@ -259,7 +259,9 @@ public sealed class ChannelReconnectTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelReconnectTests"`
 Expected: 测试失败，`ConnectAsync` 在首次拒绝后直接抛出（这是本任务的“红”）。
 
-- [ ] 2.2 抽出 `ConnectOnceAsync` 并保留单次行为
+- [x] 2.2 抽出 `ConnectOnceAsync` 并保留单次行为 — 已完成。
+
+> **TLS 暂缓：** 本 change 不接入 `TlsDuplexPipe`；`ConnectOnceAsync` 只建立 TCP + `ChannelContext`，`Tls` 非空时由 `ConnectAsync` 提前抛出 `NotSupportedException`。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -397,7 +399,7 @@ private static ChannelConnectionFailure CanceledFailure(CancellationToken ct)
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: 现有客户端测试通过；重连测试仍失败。
 
-- [ ] 2.3 加入重试循环与退避
+- [x] 2.3 加入重试循环与退避 — 已完成。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -477,7 +479,7 @@ private async Task DelayBeforeRetryAsync(TimeSpan delay, CancellationToken ct)
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelReconnectTests"`
 Expected: `ConnectAsync_RetriesInitialConnection_WithFakeClock` 通过。
 
-- [ ] 2.4 让取消与关闭打断退避
+- [x] 2.4 让取消与关闭打断退避 — 已完成。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -526,7 +528,7 @@ Expected: 测试通过。
 
 ## 3. 断线后台重连
 
-- [ ] 3.1 写已连接断线重连测试
+- [x] 3.1 写已连接断线重连测试 — 已完成。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelReconnectTests.cs`
@@ -585,7 +587,9 @@ public async Task ConnectionDropped_ReconnectsOnNextAttempt()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ConnectionDropped_ReconnectsOnNextAttempt"`
 Expected: 失败，状态停在 `Disconnected`（这是本任务的“红”）。
 
-- [ ] 3.2 实现后台重连与 watcher 分支
+- [x] 3.2 实现后台重连与 watcher 分支 — 已完成。
+
+> **TLS 暂缓：** watcher 只释放 `ChannelContext`，不涉及 TLS 包装层；重连成功仍创建新的 `ChannelContext` 与 `ConnectionId`。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -695,43 +699,22 @@ private async Task RunBackgroundReconnectAsync()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelReconnectTests"`
 Expected: 断线重连测试通过。
 
-- [ ] 3.3 补非可重试与尝试耗尽测试
+- [x] 3.3 补非可重试与尝试耗尽测试 — 已完成。
+
+> **TLS 暂缓：** TLS 证书失败测试延后到 TLS 握手接入后；本 change 用 `ConnectAsync_WithTls_DoesNotEnterReconnecting` 锁定“配置 TLS 时直接抛 `NotSupportedException` 且不重连”。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelReconnectTests.cs`
 
 ```csharp
 [Fact]
-public async Task TlsCertificateFailure_DoesNotEnterReconnecting()
+public async Task ConnectAsync_WithTls_DoesNotEnterReconnecting()
 {
-    using var certificate = TlsTestCertificates.CreateSelfSigned();
-
-    await using var server = new ChannelServer(
-        new ChannelServerOptions
-        {
-            EndPoint = new IPEndPoint(IPAddress.Loopback, 0),
-            ShutdownTimeout = TimeSpan.FromSeconds(2),
-        },
-        pipeline =>
-        {
-            pipeline.UseTls(new ChannelTlsOptions
-            {
-                ServerOptions = new SslServerAuthenticationOptions
-                {
-                    ServerCertificate = certificate,
-                },
-            });
-            pipeline.Run(TestHandlers.EchoAsync);
-        });
-
-    await server.StartAsync(CancellationToken.None);
-
-    var time = new FakeTimeProvider();
     await using var client = new ChannelClient(new ChannelClientOptions
     {
-        EndPoint = server.LocalEndPoint!,
-        ConnectTimeout = TimeSpan.FromSeconds(2),
-        TimeProvider = time,
+        EndPoint = new IPEndPoint(IPAddress.Loopback, 1),
+        ConnectTimeout = TimeSpan.FromSeconds(1),
+        TimeProvider = new FakeTimeProvider(),
         Reconnect = new ChannelReconnectPolicy
         {
             MaxAttempts = 3,
@@ -741,18 +724,14 @@ public async Task TlsCertificateFailure_DoesNotEnterReconnecting()
         },
         Tls = new ChannelTlsOptions
         {
-            ClientOptions = new SslClientAuthenticationOptions
-            {
-                TargetHost = "localhost",
-                RemoteCertificateValidationCallback = (_, _, _, _) => false,
-            },
+            ClientOptions = new SslClientAuthenticationOptions { TargetHost = "localhost" },
         },
     });
 
     var states = new List<ChannelConnectionState>();
     client.StateChanged += (_, args) => states.Add(args.NewState);
 
-    await Assert.ThrowsAsync<AuthenticationException>(
+    await Assert.ThrowsAsync<NotSupportedException>(
         () => client.ConnectAsync(CancellationToken.None));
 
     Assert.DoesNotContain(ChannelConnectionState.Reconnecting, states);
@@ -797,12 +776,12 @@ public async Task MaxAttemptsExhausted_EndsDisconnected()
 }
 ```
 
-在文件顶部补充 `System.Net.Security`、`System.Security.Authentication`、`System.Security.Cryptography`。
+在文件顶部补充 `System.Net.Security`。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~TlsCertificateFailure_DoesNotEnterReconnecting|FullyQualifiedName~MaxAttemptsExhausted_EndsDisconnected"`
+Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ConnectAsync_WithTls_DoesNotEnterReconnecting|FullyQualifiedName~MaxAttemptsExhausted_EndsDisconnected"`
 Expected: 两个测试通过。
 
-- [ ] 3.4 补关闭打断退避测试
+- [x] 3.4 补关闭打断退避测试 — 已完成。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelReconnectTests.cs`
@@ -855,7 +834,7 @@ Expected: 测试通过。
 
 ## 4. 策略覆盖、文档与验证
 
-- [ ] 4.1 补 `ShouldRetry` 覆盖与抖动范围测试
+- [x] 4.1 补 `ShouldRetry` 覆盖与抖动范围测试 — 已完成。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelReconnectPolicyTests.cs`
@@ -915,7 +894,7 @@ public async Task ShouldRetryFalse_StopsImmediately()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelReconnect"`
 Expected: 全部重连测试通过。
 
-- [ ] 4.2 审计退避没有裸 `Task.Delay`
+- [x] 4.2 审计退避没有裸 `Task.Delay` — 已完成。
 
 **Files:**
 - 只读检查：`src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -923,7 +902,7 @@ Expected: 全部重连测试通过。
 Run: `rg -n "Task\.Delay\(" src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
 Expected: 只有 `Task.Delay(jittered, _options.TimeProvider, ct)` 一行；没有两参数或无 `TimeProvider` 的退避调用。
 
-- [ ] 4.3 更新 Primitives README 的重连章节
+- [x] 4.3 更新 Primitives README 的重连章节 — 已完成。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
@@ -951,11 +930,11 @@ var options = new ChannelClientOptions
 - 首次连接失败与已连接断线共用同一套退避。
 - 重连成功产生新的 `ChannelContext` 与新 `ConnectionId`；断开期间不缓冲、不重放消息。
 - `MaxAttempts = 0` 时 `ConnectAsync` 可能一直等待，调用方必须传入可取消 token。
-- TLS 证书失败、调用方取消与配置错误不会重试。
+- 配置 TLS 时直接抛 `NotSupportedException`，调用方取消与配置错误不会重试。
 - 连接池与 batch 不在本阶段。
 ```
 
-- [ ] 4.4 跑构建、全量测试与 OpenSpec 校验
+- [x] 4.4 跑构建、全量测试与 OpenSpec 校验 — 已完成：构建 0 error，205/205 测试通过，`openspec validate --no-interactive` 通过（仅长需求警告）。
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。

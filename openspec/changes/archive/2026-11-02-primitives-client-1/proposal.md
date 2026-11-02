@@ -12,9 +12,9 @@ P1 只有服务器端传输，`ChannelClientBase` 是一个继承 `IChannelServe
 - 新增 public `ChannelConnectionState` 与 `ChannelStateChangedEventArgs`；状态为 `Disconnected`、`Connecting`、`Connected`、`Reconnecting`（本 change 预留不使用）、`Closed`。
 - `ConnectAsync` 幂等：并发调用共享同一次连接尝试；`CloseAsync` 是终态，之后不能再连接；`DisposeAsync` 幂等并到达 `Closed`。
 - 客户端不提供 `SendAsync` / `ReceiveAsync`；消息收发通过 `Connection.AsSession<T>()`（P2 可用后）完成，本 change 只暴露字节 `Reader` / `Writer`。
-- `ChannelClientOptions.Tls` 存在时，在暴露 `Connection` 之前用 `TlsDuplexPipe` 完成客户端握手；未配置时使用明文传输。
+- `ChannelClientOptions.Tls` 保留并参与配置校验；本 change 不实现 TLS 握手，`Tls` 非空时 `ConnectAsync` 抛 `NotSupportedException`，TLS 连接留给后续 change。
 - 删除 internal `ChannelClientBase` 占位（它继承 `IChannelServer`，是范畴错误且无引用）。
-- 新增 `ChannelClientTests.cs`：loopback 回显、状态迁移、幂等连接、关闭终态、连接失败分类、释放后行为、旧连接失效、TLS 连接。
+- 新增 `ChannelClientTests.cs`：loopback 回显、状态迁移、幂等连接、关闭终态、连接失败分类、释放后行为、旧连接失效，以及 `Tls` 非空时的暂不支持守卫。
 - 明确不实现重连、连接池、batch；不做多 EndPoint 故障转移。
 
 ## Capabilities
@@ -31,6 +31,6 @@ P1 只有服务器端传输，`ChannelClientBase` 是一个继承 `IChannelServe
 
 - 代码：新增 `Microsoft/Extensions/Hosting/Net/Client/{IChannelClient,ChannelClient,ChannelConnectionState,ChannelStateChangedEventArgs,ChannelConnectionFailure}.cs`、`Microsoft/Extensions/Options/ChannelClientOptions.cs`；删除 `Microsoft/Extensions/Hosting/Net/ChannelClientBase.cs`；给 internal `IChannelConnection` / `SocketChannelConnection` 增加接收方向完成信号；修改 `src/Galosys.Foundation.Primitives/README.md`。
 - 公共 API：新增 `IChannelClient`、`ChannelClient`、`ChannelClientOptions`、`ChannelConnectionState`、`ChannelStateChangedEventArgs`；内部占位 `ChannelClientBase` 删除，仓库内无消费方。
-- 依赖：依赖 `primitives-tls-transport-1`（客户端 TLS）与 `primitives-server-composition-2`（测试使用 sealed `ChannelServer`）；P2 session 可用后消息层通过 `Connection.AsSession<T>()` 接入，本 change 不引用 session 类型。
+- 依赖：仅提前复用 `primitives-tls-transport-1` 的 `ChannelTlsOptions` 配置类型；TLS 传输适配器与客户端握手不在本 change 范围。测试使用 `primitives-server-composition-2` 的 sealed `ChannelServer`；P2 session 可用后消息层通过 `Connection.AsSession<T>()` 接入，本 change 不引用 session 类型。
 - 测试：`tests/Galosys.Foundation.Primitives.Tests/ChannelClientTests.cs`；现有测试不改。
 - 验证：`dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`、`dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`、`openspec validate "primitives-client-1" --strict --no-interactive`。

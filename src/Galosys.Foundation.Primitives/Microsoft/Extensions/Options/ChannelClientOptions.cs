@@ -9,14 +9,17 @@ namespace Microsoft.Extensions.Options
         /// <summary>目标端点。必须设置。</summary>
         public EndPoint EndPoint { get; set; } = default!;
 
-        /// <summary>TCP 连接与可选 TLS 握手的超时，默认 10 秒。</summary>
+        /// <summary>单次 TCP 连接尝试的超时，默认 10 秒；重连退避不计入。</summary>
         public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
         /// <summary>TCP keep-alive 配置；null 表示使用系统默认。</summary>
         public ChannelKeepAliveOptions? KeepAlive { get; set; }
 
-        /// <summary>客户端 TLS 配置；null 表示明文连接。</summary>
+        /// <summary>客户端 TLS 配置；null 表示明文连接。TLS 握手尚未接入。</summary>
         public ChannelTlsOptions? Tls { get; set; }
+
+        /// <summary>重连策略；null 表示失败后不重试。</summary>
+        public ChannelReconnectPolicy? Reconnect { get; set; }
 
         /// <summary>时间源；重连与超时测试可注入假时钟。</summary>
         public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
@@ -45,6 +48,7 @@ namespace Microsoft.Extensions.Options
             }
 
             Tls?.ValidateClient();
+            Reconnect?.Validate();
         }
 
         internal ChannelClientOptions Clone()
@@ -61,6 +65,9 @@ namespace Microsoft.Extensions.Options
                     KeepAliveRetryCount = KeepAlive.KeepAliveRetryCount,
                 };
             }
+
+            if (Reconnect is not null)
+                clone.Reconnect = Reconnect.Clone();
 
             // ChannelTlsOptions 含证书与回调，不深拷贝；调用方不得在连接期间修改同一实例。
             return clone;

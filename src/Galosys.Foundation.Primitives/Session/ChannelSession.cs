@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace Microsoft.Extensions.Hosting.Net
 {
     /// <summary>借用连接的拉模型消息会话；实现细节不对外公开。</summary>
-    internal sealed class ChannelSession<T> : IChannelSession<T>
+    internal sealed class ChannelSession<T> : IChannelSession<T>, IChannelSessionBatchWriter<T>
     {
         private readonly ChannelContext _context;
         private readonly IMessageFramer _framer;
@@ -135,6 +135,65 @@ namespace Microsoft.Extensions.Hosting.Net
                 {
                     _context.Abort(ex);
                     throw;
+                }
+
+                FlushResult flush;
+                try
+                {
+                    flush = await _context.Writer.FlushAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException ex)
+                {
+                    _context.Abort(ex);
+                    throw;
+                }
+
+                if (flush.IsCompleted)
+                    throw new IOException("连接已关闭，无法继续写入。");
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
+        }
+
+        /// <summary>按顺序写入一批消息，整个批次只 flush 一次。</summary>
+        /// <remarks>
+        /// 批次期间持有写锁，与并发 <see cref="WriteAsync"/> 串行化；
+        /// 批次不是原子的：任何一步失败都会中止连接，避免半批数据被后续写入误认为完整消息。
+        /// </remarks>
+        public async ValueTask WriteBatchAsync(IReadOnlyList<T> messages, CancellationToken ct)
+        {
+            ArgumentNullException.ThrowIfNull(messages);
+            ThrowIfDisposed();
+            ct.ThrowIfCancellationRequested();
+
+            if (messages.Count == 0)
+                return;
+
+            await _writeLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                ThrowIfDisposed();
+
+                foreach (var message in messages)
+                {
+                    try
+                    {
+                        using var buffer = new PooledBufferWriter();
+                        _codec.Encode(buffer, message);
+
+                        if (buffer.WrittenMemory.Length > _maxMessageSize)
+                            throw new InvalidDataException(
+                                $"消息长度 {buffer.WrittenMemory.Length} 超过上限 {_maxMessageSize}。");
+
+                        _framer.WriteFrame(_context.Writer, buffer.WrittenSequence);
+                    }
+                    catch (Exception ex)
+                    {
+                        _context.Abort(ex);
+                        throw;
+                    }
                 }
 
                 FlushResult flush;

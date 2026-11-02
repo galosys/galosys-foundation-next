@@ -34,7 +34,9 @@ The implementation SHALL provide a public `IChannelClient : IAsyncDisposable` in
 
 ### Requirement: 单连接建立
 
-The implementation SHALL create exactly one socket-based connection per successful `ConnectAsync`, using `ChannelClientOptions.EndPoint`, the configured `ConnectTimeout`, TCP no-delay, and optional keep-alive. The attempt MUST include the optional client TLS handshake before any `ChannelContext` is exposed. Concurrent `ConnectAsync` calls made before completion MUST share one attempt; a call while `Connected` MUST complete without opening another connection. A successful connect MUST create a new `ChannelContext` with a new `ConnectionId`, and each attempt MUST NOT be retried in this change. On failure, the client MUST clean up partial resources, return to `Disconnected`, publish one `ChannelConnectionFailure`, and rethrow the original exception. Caller cancellation MUST surface as `OperationCanceledException` with a non-retryable failure and MUST NOT leave a connected or half-initialized client.
+The implementation SHALL create exactly one socket-based connection per successful `ConnectAsync`, using `ChannelClientOptions.EndPoint`, the configured `ConnectTimeout`, TCP no-delay, and optional keep-alive. Concurrent `ConnectAsync` calls made before completion MUST share one attempt; a call while `Connected` MUST complete without opening another connection. A successful connect MUST create a new `ChannelContext` with a new `ConnectionId`, and each attempt MUST NOT be retried in this change. On failure, the client MUST clean up partial resources, return to `Disconnected`, publish one `ChannelConnectionFailure`, and rethrow the original exception. Caller cancellation MUST surface as `OperationCanceledException` with a non-retryable failure and MUST NOT leave a connected or half-initialized client.
+
+This change does not perform a TLS handshake. When `ChannelClientOptions.Tls` is non-null, `ConnectAsync` MUST throw `NotSupportedException` before creating a socket or entering `Connecting`; client TLS is deferred to a follow-up change.
 
 #### Scenario: 明文 loopback 回显
 
@@ -63,12 +65,19 @@ The implementation SHALL create exactly one socket-based connection per successf
 - **AND** 状态回到 `Disconnected`
 - **AND** `StateChanged` 携带 `ChannelConnectionFailureKind.ConnectionRefused` 且 `IsRetryable` 为 true
 
+#### Scenario: 配置 TLS 时暂不支持连接
+
+- **WHEN** `ChannelClientOptions.Tls` 非空且调用 `ConnectAsync`
+- **THEN** 抛出 `NotSupportedException`
+- **AND** 不创建 socket、不进入 `Connecting`
+- **AND** 状态保持 `Disconnected`
+
 #### Scenario: 连接超时
 
-- **WHEN** 目标地址在 `ConnectTimeout` 内未完成 TCP 连接或 TLS 握手
+- **WHEN** 目标地址在 `ConnectTimeout` 内未完成 TCP 连接
 - **THEN** `ConnectAsync` 抛出 `TimeoutException`
 - **AND** 失败分类为 `TimedOut` 且 `IsRetryable` 为 true
-- **AND** 半成品 socket 与 TLS 包装层被释放
+- **AND** 半成品 socket 被释放
 
 #### Scenario: 调用方取消连接
 
@@ -85,7 +94,7 @@ The implementation SHALL create exactly one socket-based connection per successf
 
 ### Requirement: 客户端关闭与释放
 
-`CloseAsync` MUST transition the client to `Closed` exactly once, cancel an in-flight connection attempt, flush committed output with a bounded drain, dispose the TLS wrapper before the underlying `ChannelContext`, set `Connection` to null, and make all previously captured contexts unusable. `CloseAsync` MUST be idempotent and MUST NOT throw when the client is already closed. Cancellation of `CloseAsync` MUST abort the remaining drain, still reach `Closed`, and complete without leaving the socket open. `DisposeAsync` MUST be idempotent, use the same shutdown path, and release the client's resources. After `Closed`, no reconnect, connect, or state event may occur.
+`CloseAsync` MUST transition the client to `Closed` exactly once, cancel an in-flight connection attempt, flush committed output with a bounded drain, dispose the underlying `ChannelContext`, set `Connection` to null, and make all previously captured contexts unusable. `CloseAsync` MUST be idempotent and MUST NOT throw when the client is already closed. Cancellation of `CloseAsync` MUST abort the remaining drain, still reach `Closed`, and complete without leaving the socket open. `DisposeAsync` MUST be idempotent, use the same shutdown path, and release the client's resources. After `Closed`, no reconnect, connect, or state event may occur.
 
 #### Scenario: 优雅关闭排空已提交输出
 
@@ -123,7 +132,7 @@ The implementation SHALL create exactly one socket-based connection per successf
 
 ### Requirement: 客户端配置
 
-The implementation SHALL provide a public sealed `ChannelClientOptions` in `Microsoft.Extensions.Options` with `EndPoint EndPoint`, `TimeSpan ConnectTimeout` defaulting to 10 seconds, `ChannelKeepAliveOptions? KeepAlive`, `ChannelTlsOptions? Tls`, and `TimeProvider TimeProvider` defaulting to `TimeProvider.System`. `ChannelClientOptions` MUST validate that `EndPoint` is non-null, `ConnectTimeout` is greater than zero and at most one day, `TimeProvider` is non-null, keep-alive values follow the server rules, and `Tls`, when present, passes client-side TLS validation. `ChannelClient` MUST validate and clone the options in its constructor, so later mutations of the caller's instance do not affect a running client. Invalid configuration MUST throw `ArgumentException` before any socket is created.
+The implementation SHALL provide a public sealed `ChannelClientOptions` in `Microsoft.Extensions.Options` with `EndPoint EndPoint`, `TimeSpan ConnectTimeout` defaulting to 10 seconds, `ChannelKeepAliveOptions? KeepAlive`, `ChannelTlsOptions? Tls`, and `TimeProvider TimeProvider` defaulting to `TimeProvider.System`. `ChannelClientOptions` MUST validate that `EndPoint` is non-null, `ConnectTimeout` is greater than zero and at most one day, `TimeProvider` is non-null, keep-alive values follow the server rules, and `Tls`, when present, passes client-side TLS validation. `ChannelClient` MUST validate and clone the options in its constructor, so later mutations of the caller's instance do not affect a running client. Invalid configuration MUST throw `ArgumentException` before any socket is created. TLS configuration is validated, but the TLS handshake itself is deferred to a follow-up change.
 
 #### Scenario: 默认值
 

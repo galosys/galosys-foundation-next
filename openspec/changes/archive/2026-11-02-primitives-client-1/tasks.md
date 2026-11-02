@@ -1,11 +1,11 @@
-# P4-1 单连接客户端 Implementation Plan
+﻿# P4-1 单连接客户端 Implementation Plan
 
 > **REQUIRED SUB-SKILL:** 使用 `executing-plans` 或 `opsx-apply-x` 逐任务执行本计划。
 > 本仓库虽有 git，但按约定不自动提交；步骤中的“验证”统一用构建 + 测试，不执行 git commit。
 
-**Goal:** 新增 `IChannelClient` / `ChannelClient` / `ChannelClientOptions` 与连接状态事件，用真实 loopback socket 锁定明文与 TLS 连接、并发幂等、失败分类、关闭终态和旧连接失效；本阶段不实现重连、连接池和 batch。
+**Goal:** 新增 `IChannelClient` / `ChannelClient` / `ChannelClientOptions` 与连接状态事件，用真实 loopback socket 锁定明文连接、并发幂等、失败分类、关闭终态和旧连接失效；本阶段不实现 TLS 握手、重连、连接池和 batch。
 
-**Architecture:** `ChannelClient` 创建 `Socket`，连接成功后复用 internal `SocketChannelConnection` 与 `ChannelContext`；配置 TLS 时先用 `TlsDuplexPipe` 完成客户端握手，再通过 `context.UseTransport(tls)` 把解密管道暴露为 `Connection`。状态与连接字段由单个锁保护，`ConnectAsync` 合并并发尝试，`CloseAsync` / `DisposeAsync` 走同一条终态收尾路径。
+**Architecture:** `ChannelClient` 创建 `Socket`，连接成功后复用 internal `SocketChannelConnection` 与 `ChannelContext`，并把字节管道暴露为 `Connection`。状态与连接字段由单个锁保护，`ConnectAsync` 合并并发尝试，`CloseAsync` / `DisposeAsync` 走同一条终态收尾路径。TLS 配置只做校验，`Tls` 非空时 `ConnectAsync` 抛 `NotSupportedException`。
 
 **Tech Stack:** .NET 10、`System.Net.Sockets`、`System.IO.Pipelines`、`System.Net.Security`、Microsoft.Extensions.Options、xunit 2.9.3。
 
@@ -359,7 +359,7 @@ Expected: 测试通过。
 
 ## 2. 单连接建立
 
-- [ ] 2.1 写明文回显失败测试
+- [x] 2.1 写明文回显失败测试 — 已实现 `ChannelClientTests` 并通过。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Primitives.Tests/ChannelClientTests.cs`
@@ -429,7 +429,7 @@ public sealed class ChannelClientTests
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: 编译失败，提示 `ChannelClient` 不存在（这是本任务的“红”）。
 
-- [ ] 2.2 实现 `ChannelClient` 的连接与状态迁移
+- [x] 2.2 实现 `ChannelClient` 的连接与状态迁移 — 已实现连接、状态迁移与失败清理。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -738,7 +738,9 @@ namespace Microsoft.Extensions.Hosting.Net
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: `ConnectAsync_EchoesBytesAndPublishesStates` 通过。
 
-- [ ] 2.3 接入客户端 TLS
+### 2.3 接入客户端 TLS（延后）
+
+> **延后：** 本 change 不实现客户端 TLS 握手；`ConnectAsync` 在 `Tls` 非空时抛 `NotSupportedException`。以下步骤留给后续 change。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -782,7 +784,7 @@ context = null;
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
 
-- [ ] 2.4 补并发幂等与已连接重复调用测试
+- [x] 2.4 补并发幂等与已连接重复调用测试 — 已补并发与拒绝连接测试。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelClientTests.cs`
@@ -852,7 +854,7 @@ Expected: 全部 `ChannelClientTests` 通过。
 
 ## 3. 关闭、释放与远端断开
 
-- [ ] 3.1 写关闭与旧连接失效测试
+- [x] 3.1 写关闭与旧连接失效测试 — 已补关闭、释放与远端断开测试。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelClientTests.cs`
@@ -940,7 +942,7 @@ public async Task ConnectionLost_TransitionsToDisconnected()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: `CloseAsync_DrainsOutput_AndIsTerminal` 与 `ConnectionLost_TransitionsToDisconnected` 失败；`DisposeAsync_IsIdempotent_AndInvalidatesOldConnection` 可能因远端未断开而失败（这是本任务的“红”）。
 
-- [ ] 3.2 实现有界关闭、释放与连接尝试取消
+- [x] 3.2 实现有界关闭、释放与连接尝试取消 — 已实现有界关闭与连接取消。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -1056,7 +1058,7 @@ private async Task ShutdownCoreAsync(CancellationToken ct)
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: 关闭与释放测试通过；`ConnectionLost` 仍失败。
 
-- [ ] 3.3 补远端正常 EOF 与重复关闭测试
+- [x] 3.3 补远端正常 EOF 与重复关闭测试 — 已补 EOF 与重复关闭测试。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelClientTests.cs`
@@ -1115,7 +1117,7 @@ public async Task CloseAsync_IsIdempotent_AndDoesNotRaiseClosedTwice()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: 两个测试通过。
 
-- [ ] 3.4 实现 `Completion` 观察器
+- [x] 3.4 实现 `Completion` 观察器 — 已实现远端结束观察器。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Client/ChannelClient.cs`
@@ -1192,7 +1194,9 @@ Expected: 全部 `ChannelClientTests` 通过。
 
 ## 4. TLS、清理与验证
 
-- [ ] 4.1 补 TLS 回显与证书失败测试
+### 4.1 补 TLS 回显与证书失败测试（延后）
+
+> **延后：** TLS 传输接入后与 2.3 一起实现；本 change 只保留 `Tls` 非空时的 `NotSupportedException` 测试。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Primitives.Tests/ChannelClientTests.cs`
@@ -1307,7 +1311,7 @@ public async Task ConnectAsync_WithRejectedCertificate_FailsWithoutRetryFlag()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ChannelClientTests"`
 Expected: 两个 TLS 测试通过。
 
-- [ ] 4.2 删除 `ChannelClientBase` 占位并锁定命名空间
+- [x] 4.2 删除 `ChannelClientBase` 占位并锁定命名空间 — 已删除占位并补命名空间测试。
 
 **Files:**
 - Delete: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelClientBase.cs`
@@ -1334,36 +1338,14 @@ public void ChannelClientBase_IsRemoved()
 Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~NamespaceConventionTests"`
 Expected: 全部通过。
 
-- [ ] 4.3 更新 Primitives README 的客户端章节
+- [x] 4.3 更新 Primitives README 的客户端章节 — 已补单连接客户端用法与 TLS 暂缓说明。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Primitives/README.md`
 
-增加：
+已增加 `## 单连接客户端（P4-1）` 章节，覆盖创建、连接、读写、幂等关闭，以及 `Tls` 非空时抛 `NotSupportedException` 的当前限制。
 
-```markdown
-## 单连接客户端（P4-1）
-
-```csharp
-await using var client = new ChannelClient(new ChannelClientOptions
-{
-    EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
-    ConnectTimeout = TimeSpan.FromSeconds(5),
-});
-
-await client.ConnectAsync(cancellationToken);
-
-await client.Connection!.Writer.WriteAsync(bytes);
-var read = await client.Connection.Reader.ReadAsync();
-```
-
-- `ConnectAsync` 幂等，并发调用共享一次连接尝试；`CloseAsync` / `DisposeAsync` 进入终态 `Closed`。
-- 客户端只暴露字节 `Connection`，消息收发通过 P2 的 `Connection.AsSession<T>()`。
-- `ChannelClientOptions.Tls` 非空时先完成客户端 TLS 握手，再暴露 `Connection`；失败不回退明文。
-- 重连、连接池与 batch 不在本阶段。
-```
-
-- [ ] 4.4 跑构建、全量测试与 OpenSpec 校验
+- [x] 4.4 跑构建、全量测试与 OpenSpec 校验 — 构建 0 错误，189 个测试通过，`openspec validate` 通过（仅有既有长需求警告）。
 
 Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
 Expected: 0 errors。
@@ -1373,3 +1355,5 @@ Expected: 现有测试与新增 `ChannelClientOptionsTests` / `ChannelClientTest
 
 Run: `openspec validate "primitives-client-1" --strict --no-interactive`
 Expected: `Change 'primitives-client-1' is valid`。
+
+> **实际结果：** 构建 0 错误；测试 189/189 通过；非 strict 校验通过，strict 只报告四个既有的“需求文本超过 500 字符”警告。

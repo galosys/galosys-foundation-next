@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting.Net;
+using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Primitives.Tests;
 
@@ -22,6 +23,20 @@ public sealed class NamespaceConventionTests
 
         Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerBase"));
         Assert.Null(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerServiceCollectionExtensions"));
+    }
+
+    [Fact]
+    public void ChannelClientBase_IsRemoved()
+    {
+        var assembly = typeof(ChannelClient).Assembly;
+
+        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelClientBase"));
+        Assert.Equal(
+            "Microsoft.Extensions.Hosting.Net",
+            typeof(ChannelClient).Namespace);
+        Assert.Equal(
+            "Microsoft.Extensions.Options",
+            typeof(ChannelClientOptions).Namespace);
     }
 
     [Fact]

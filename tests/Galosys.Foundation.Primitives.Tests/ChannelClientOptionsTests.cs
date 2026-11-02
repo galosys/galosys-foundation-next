@@ -17,6 +17,7 @@ public sealed class ChannelClientOptionsTests
         Assert.Same(TimeProvider.System, options.TimeProvider);
         Assert.Null(options.KeepAlive);
         Assert.Null(options.Tls);
+        Assert.Null(options.Reconnect);
     }
 
     [Fact]
@@ -37,5 +38,33 @@ public sealed class ChannelClientOptionsTests
         };
 
         Assert.Throws<ArgumentException>(() => options.Validate());
+    }
+
+    [Fact]
+    public void Validate_Throws_WhenReconnectInvalid()
+    {
+        var options = new ChannelClientOptions
+        {
+            EndPoint = new IPEndPoint(IPAddress.Loopback, 12345),
+            Reconnect = new ChannelReconnectPolicy { InitialDelay = TimeSpan.Zero },
+        };
+
+        Assert.Throws<ArgumentException>(() => options.Validate());
+    }
+
+    [Fact]
+    public void Clone_CopiesReconnectPolicy()
+    {
+        var options = new ChannelClientOptions
+        {
+            EndPoint = new IPEndPoint(IPAddress.Loopback, 12345),
+            Reconnect = new ChannelReconnectPolicy { MaxAttempts = 3 },
+        };
+
+        var clone = options.Clone();
+        options.Reconnect!.MaxAttempts = 9;
+
+        Assert.NotSame(options.Reconnect, clone.Reconnect);
+        Assert.Equal(3, clone.Reconnect!.MaxAttempts);
     }
 }
