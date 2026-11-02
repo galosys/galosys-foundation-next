@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class ChannelReconnectPolicyTests
 {

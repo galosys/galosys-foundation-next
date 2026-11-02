@@ -2,7 +2,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 internal static class TlsTestCertificates
 {

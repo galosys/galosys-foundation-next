@@ -5,9 +5,9 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 /// <summary>测试用的内存连接；只实现会话写路径需要的成员。</summary>
 internal sealed class TestChannelConnection : IChannelConnection

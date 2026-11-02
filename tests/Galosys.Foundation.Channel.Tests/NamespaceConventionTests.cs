@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class NamespaceConventionTests
 {
@@ -12,8 +12,8 @@ public sealed class NamespaceConventionTests
 
         Assert.NotNull(assembly.GetType("Microsoft.Extensions.Options.ChannelServerOptions"));
         Assert.NotNull(assembly.GetType("Microsoft.Extensions.Options.ChannelKeepAliveOptions"));
-        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerOptions"));
-        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelKeepAliveOptions"));
+        Assert.Null(assembly.GetType("Galosys.Foundation.Channel.ChannelServerOptions"));
+        Assert.Null(assembly.GetType("Galosys.Foundation.Channel.ChannelKeepAliveOptions"));
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public sealed class NamespaceConventionTests
     {
         var assembly = typeof(ChannelServer).Assembly;
 
-        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerBase"));
+        Assert.Null(assembly.GetType("Galosys.Foundation.Channel.ChannelServerBase"));
         Assert.Null(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerServiceCollectionExtensions"));
     }
 
@@ -30,9 +30,9 @@ public sealed class NamespaceConventionTests
     {
         var assembly = typeof(ChannelClient).Assembly;
 
-        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelClientBase"));
+        Assert.Null(assembly.GetType("Galosys.Foundation.Channel.ChannelClientBase"));
         Assert.Equal(
-            "Microsoft.Extensions.Hosting.Net",
+            "Galosys.Foundation.Channel",
             typeof(ChannelClient).Namespace);
         Assert.Equal(
             "Microsoft.Extensions.Options",
@@ -48,8 +48,25 @@ public sealed class NamespaceConventionTests
         Assert.True(typeof(ChannelServer).IsSealed);
         Assert.True(typeof(IChannelServer).IsAssignableFrom(typeof(ChannelServer)));
 
-        var core = assembly.GetType("Microsoft.Extensions.Hosting.Net.ChannelServerCore");
+        var core = assembly.GetType("Galosys.Foundation.Channel.ChannelServerCore");
         Assert.NotNull(core);
         Assert.False(core.IsPublic);
+    }
+
+    [Fact]
+    public void HostedServiceAndDiExtensions_UseMicrosoftExtensionsNamespaces()
+    {
+        var assembly = typeof(ChannelServer).Assembly;
+
+        Assert.NotNull(assembly.GetType("Microsoft.Extensions.Hosting.ChannelServerGroupHostedService"));
+        Assert.NotNull(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerGroupServiceCollectionExtensions"));
+    }
+
+    [Fact]
+    public void Assembly_ExposesNoTypesUnderLegacyHostingNetNamespace()
+    {
+        var assembly = typeof(ChannelServer).Assembly;
+
+        Assert.Empty(assembly.GetTypes().Where(t => t.Namespace == "Microsoft.Extensions.Hosting.Net"));
     }
 }

@@ -1,9 +1,9 @@
 using System.Buffers;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed record TestMessage(int Id, string Text);
 

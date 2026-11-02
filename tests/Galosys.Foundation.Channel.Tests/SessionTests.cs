@@ -2,10 +2,10 @@ using System.Buffers.Binary;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class SessionTests
 {

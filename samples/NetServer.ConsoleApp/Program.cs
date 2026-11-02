@@ -1,6 +1,6 @@
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetServer.ConsoleApp;

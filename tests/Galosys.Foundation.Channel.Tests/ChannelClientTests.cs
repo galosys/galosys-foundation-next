@@ -4,10 +4,10 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class ChannelClientTests
 {

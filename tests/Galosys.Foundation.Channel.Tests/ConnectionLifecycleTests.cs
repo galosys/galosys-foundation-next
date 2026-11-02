@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class ConnectionLifecycleTests
 {

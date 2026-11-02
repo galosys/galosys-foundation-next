@@ -2,9 +2,9 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class ProtocolDispatcherTests
 {

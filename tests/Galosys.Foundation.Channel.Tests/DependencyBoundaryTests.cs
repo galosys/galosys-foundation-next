@@ -1,6 +1,6 @@
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class DependencyBoundaryTests
 {
