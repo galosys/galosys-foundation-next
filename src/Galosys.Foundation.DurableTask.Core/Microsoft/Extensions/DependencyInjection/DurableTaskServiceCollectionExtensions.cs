@@ -1,4 +1,5 @@
 ﻿using DurableTask.Core;
+using Galosys.Foundation.DurableTask.Core;
 using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

@@ -1,5 +1,6 @@
 using DurableTask.Core;
 using DurableTask.SqlServer;
+using Galosys.Foundation.DurableTask.Core;
 using Newtonsoft.Json;
 
 namespace DTFx.ConsoleApp

@@ -14,6 +14,9 @@
   `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`。
 - 运行：`dotnet run --project samples/<Project>/<Project>.csproj`。多数示例是长期运行的 `BackgroundService`，
   需 Ctrl+C 退出。
+- Durable Task 示例单独构建：`dotnet build samples/DTFx.ConsoleApp/DTFx.ConsoleApp.csproj`；
+  运行 `dotnet run --project samples/DTFx.ConsoleApp/DTFx.ConsoleApp.csproj` 需要可访问的 SQL Server 实例
+  （连接串取自配置节 `ConnectionStrings:Default`），编排以 `dtfx` 为 task hub key 持久化。
 - `MafSample.API` 没有外部基础设施无法启动：PostgreSQL `:15432`、Redis `:6379`、RocketMQ `:8081`
   （默认消息总线）、RabbitMQ `:5672`、OTLP `:5080`。改 API 靠编译验证。`MafSample.Adapter`（`:5190`）
   可独立运行。
@@ -36,7 +39,10 @@
   `IChannelSession<T>`（`AsLineTextSession`/`AsJsonSession` 组合入口，批量写用 `WriteBatchAsync`）；
   客户端用 `Galosys/Foundation/Channel/Client/` 的 `ChannelClient`（重连退避）与 `ChannelClientPool`（有界连接池））、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
-  `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）。
+  `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）、
+  `Galosys.Foundation.DurableTask.Core`（Durable Task 编排/活动封装，核心类型用
+  `Galosys.Foundation.DurableTask.Core`，DI 扩展用 `Microsoft.Extensions.DependencyInjection`，
+  宿主适配器用 `Microsoft.Extensions.Hosting`）。
 - `samples/MafSample.ConsoleApp/Microsoft/Extensions/Hosting/WindowedBatchWorker.cs` 是本地辅助类，不是包里的类型。
 - `samples/MafSample.WpfApp` 目标 `net10.0-windows`（UseWPF），菜单树来自 `appsettings.json` 的 `Menu` 节。
 - 注释和 XML 文档用中文。`samples/MafSample.API` 开启 `GenerateDocumentationFile=true`，新增 public 成员会产生

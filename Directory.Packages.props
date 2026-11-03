@@ -40,6 +40,7 @@
 		<PackageVersion Include="galosys.foundation.core" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.dapper" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.duckdb" Version="$(MainVersion)" />
+		<PackageVersion Include="galosys.foundation.durabletask.core" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.entityframeworkcore" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.freeredis" Version="$(MainVersion)" />
 		<PackageVersion Include="galosys.foundation.notification" Version="$(MainVersion)" />

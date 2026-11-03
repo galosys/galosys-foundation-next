@@ -11,6 +11,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Galosys.Foundation.Azure.DurableTask.Core\Galosys.Foundation.Azure.DurableTask.Core.csproj" />
+		<ProjectReference Include="..\..\src\Galosys.Foundation.DurableTask.Core\Galosys.Foundation.DurableTask.Core.csproj" />
 	</ItemGroup>
 </Project>

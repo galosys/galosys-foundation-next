@@ -16,6 +16,7 @@
 |---|---|---|---|
 | `AopSample.ConsoleApp` | `samples/AopSample.ConsoleApp/` | 示例（控制台） | Castle 动态代理 + `[CatchLogging]` 拦截器，打印拦截日志。 |
 | `DataIngestionSample.ConsoleApp` | `samples/DataIngestionSample.ConsoleApp/` | 示例（控制台） | `Microsoft.Extensions.DataIngestion`（预览包）Markdown 读取/分块试验，管线尚未接线。 |
+| `DTFx.ConsoleApp` | `samples/DTFx.ConsoleApp/` | 示例（控制台） | Durable Task 示例：SQL Server 持久化编排 + 审批事件。[README](samples/DTFx.ConsoleApp/README.md) |
 | `MafSample.Adapter` | `samples/MafSample.Adapter/` | 示例（ASP.NET Core） | 适配器模板，监听 `:5190`，可独立运行。 |
 | `MafSample.API` | `samples/MafSample.API/` | 示例（ASP.NET Core） | 模块化 API：CQRS、状态机、RabbitMQ/AMQP handler、EF Core、Swagger、HybridCache；需外部基础设施。 |
 | `MafSample.ConsoleApp` | `samples/MafSample.ConsoleApp/` | 示例（Worker Service） | 模块化 Worker：Channel + Rx 窗口批处理；`ProcessBatchAsync` 尚未实现。 |
@@ -24,6 +25,7 @@
 | `NetServer.ConsoleApp` | `samples/NetServer.ConsoleApp/` | 示例（控制台） | Channel 的服务端示例，监听 `0.0.0.0:8000`；见 [README](samples/NetServer.ConsoleApp/README.md)。 |
 | `Galosys.Foundation.Channel` | `src/Galosys.Foundation.Channel/` | 本地类库 | 逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端；见 [README](src/Galosys.Foundation.Channel/README.md)。 |
 | `Galosys.Foundation.Doris` | `src/Galosys.Foundation.Doris/` | 本地类库 | Doris `_stream_load` 的 HTTP 客户端，默认 FE HTTP 端口 `8030`。 |
+| `Galosys.Foundation.DurableTask.Core` | `src/Galosys.Foundation.DurableTask.Core/` | 本地类库 | Durable Task 编排/活动封装：DI 注册 + 宿主生命周期适配 + TaskHubClient 扩展。[README](src/Galosys.Foundation.DurableTask.Core/README.md) |
 | `Galosys.Foundation.Nats.Net` | `src/Galosys.Foundation.Nats.Net/` | 本地类库 | NATS 消费者扫描原型，当前不可编译。 |
 | `tests/Galosys.Foundation.Channel.Tests` | `tests/Galosys.Foundation.Channel.Tests/` | 测试（xUnit） | 覆盖 Channel 的单元测试。 |
 
@@ -97,5 +99,7 @@ API 监听 `http://localhost:5134`，Swagger 位于 `/swagger`。`MafSample.Adap
 ## 相关文档
 
 - [Galosys.Foundation.Channel](src/Galosys.Foundation.Channel/README.md)
+- [Galosys.Foundation.DurableTask.Core](src/Galosys.Foundation.DurableTask.Core/README.md)
 - [NetServer.ConsoleApp](samples/NetServer.ConsoleApp/README.md)
+- [DTFx.ConsoleApp](samples/DTFx.ConsoleApp/README.md)
 - [OpenSpec 规格](openspec/specs/)
