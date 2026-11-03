@@ -118,9 +118,9 @@
 
 > 以下 README 相关任务在 apply 阶段**跳过**，由归档阶段（`/opsx-archive-x`）统一完成并回填 `- [x]`。
 
-- [ ] 5.1 编写 `src/Galosys.Foundation.DurableTask.Core/README.md`：说明库定位（Durable Task 编排/活动的 DI 与宿主集成封装）、支持的持久化后端（SQL Server / Azure Storage 等）、核心类型与命名空间归属、构建与运行示例的命令。验证：文件存在且包含 `dotnet build samples/DTFx.ConsoleApp/DTFx.ConsoleApp.csproj` 与 `Galosys.Foundation.DurableTask.Core` 命名空间说明
+- [x] 5.1 编写 `src/Galosys.Foundation.DurableTask.Core/README.md`：说明库定位（Durable Task 编排/活动的 DI 与宿主集成封装）、支持的持久化后端（SQL Server / Azure Storage 等）、核心类型与命名空间归属、构建与运行示例的命令。验证：文件存在且包含 `dotnet build samples/DTFx.ConsoleApp/DTFx.ConsoleApp.csproj` 与 `Galosys.Foundation.DurableTask.Core` 命名空间说明
 
-- [ ] 5.2 编写 `samples/DTFx.ConsoleApp/README.md`：说明示例用途（SQL Server 持久化的审批编排）、前置条件（SQL Server 实例与连接串）、运行方式与预期输出。验证：文件存在且包含运行命令与连接串配置说明
+- [x] 5.2 编写 `samples/DTFx.ConsoleApp/README.md`：说明示例用途（SQL Server 持久化的审批编排）、前置条件（SQL Server 实例与连接串）、运行方式与预期输出。验证：文件存在且包含运行命令与连接串配置说明
 
 ## Workflow follow-up
 
