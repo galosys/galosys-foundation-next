@@ -10,15 +10,16 @@
 #### Scenario: samples 包含全部示例
 
 - **WHEN** 列出 `samples/` 下的项目目录
-- **THEN** 包含 `AopSample.ConsoleApp`、`DataIngestionSample.ConsoleApp`、`MafSample.Adapter`、`MafSample.API`、`MafSample.ConsoleApp`、`MafSample.WpfApp`、`NatsSample.ConsoleApp`、`NetServer.ConsoleApp`
+- **THEN** 包含 `AopSample.ConsoleApp`、`DataIngestionSample.ConsoleApp`、`DTFx.ConsoleApp`、`MafSample.Adapter`、`MafSample.API`、`MafSample.ConsoleApp`、`MafSample.WpfApp`、`NatsSample.ConsoleApp`、`NetServer.ConsoleApp`
 - **AND** 这些项目不再出现在 `src/` 下
 
 #### Scenario: src 只包含 foundation 类库
 
 - **WHEN** 列出 `src/` 下的项目目录
-- **THEN** 仅包含 `Galosys.Foundation.Channel`、`Galosys.Foundation.Doris`、`Galosys.Foundation.Nats.Net`
+- **THEN** 仅包含 `Galosys.Foundation.Channel`、`Galosys.Foundation.Doris`、`Galosys.Foundation.DurableTask.Core`、`Galosys.Foundation.Nats.Net`
 - **AND** 不存在示例项目目录
 - **AND** 不存在名为 `Galosys.Foundation.Primitives` 的目录
+- **AND** 不存在名为 `Galosys.Foundation.Azure.DurableTask.Core` 的目录
 
 ### Requirement: 解决方案结构映射磁盘目录
 
@@ -28,7 +29,7 @@
 
 - **WHEN** 执行 `dotnet sln Galosys.Foundation.Next.slnx list`
 - **THEN** 命令成功退出
-- **AND** 输出包含 8 个 `samples/` 项目、3 个 `src/` 项目与 1 个 `tests/` 项目
+- **AND** 输出包含 9 个 `samples/` 项目、4 个 `src/` 项目与 1 个 `tests/` 项目
 
 #### Scenario: 解决方案文件夹与磁盘一致
 
@@ -39,13 +40,14 @@
 
 ### Requirement: 迁移后的项目引用与构建路径有效
 
-迁移后的示例项目 MUST 能通过新的 `samples/` 路径构建，且对 `src/` 下 foundation 类库的项目引用 MUST 正确解析。`NetServer.ConsoleApp` MUST 解析到 `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`，测试项目 MUST 解析到 `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`。
+迁移后的示例项目 MUST 能通过新的 `samples/` 路径构建，且对 `src/` 下 foundation 类库的项目引用 MUST 正确解析。`NetServer.ConsoleApp` MUST 解析到 `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`，`DTFx.ConsoleApp` MUST 解析到 `src/Galosys.Foundation.DurableTask.Core/Galosys.Foundation.DurableTask.Core.csproj`，测试项目 MUST 解析到 `src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`。
 
 #### Scenario: 迁移示例可单独构建
 
 - **WHEN** 执行 `dotnet build samples/<Project>/<Project>.csproj`
 - **THEN** 除已知不可编译的 `NatsSample.ConsoleApp` 外，项目构建成功
 - **AND** `NetServer.ConsoleApp` 能解析 `Galosys.Foundation.Channel` 项目引用
+- **AND** `DTFx.ConsoleApp` 能解析 `Galosys.Foundation.DurableTask.Core` 项目引用
 
 #### Scenario: 测试项目引用保持不变
 
@@ -62,6 +64,12 @@
 - **WHEN** 按 `README.md` 或 `AGENTS.md` 中的示例命令执行
 - **THEN** 示例项目路径为 `samples/<Project>/<Project>.csproj`
 - **AND** foundation 类库路径为 `src/<Project>/<Project>.csproj`
+
+#### Scenario: 根文档收录全部 foundation 类库
+
+- **WHEN** 查看 `README.md` 的项目一览表
+- **THEN** 表格包含 `Galosys.Foundation.DurableTask.Core` 行且路径为 `src/Galosys.Foundation.DurableTask.Core/`
+- **AND** 表格不包含 `Galosys.Foundation.Azure.DurableTask.Core` 行
 
 #### Scenario: 历史记录不被改写
 
