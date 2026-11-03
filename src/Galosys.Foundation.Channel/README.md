@@ -103,7 +103,7 @@ static async Task HandleAsync(ChannelContext context)
 }
 ```
 
-示例 `NetServer.ConsoleApp` 只在终端 handler 创建行文本会话：
+示例 `NetServer.ConsoleApp` 只在终端 handler 创建行文本会话，并用同一个会话回包：
 
 ```csharp
 public async Task HandleAsync(ChannelContext context)
@@ -123,6 +123,9 @@ public async Task HandleAsync(ChannelContext context)
         }
 
         _logger.LogInformation(">>>>> {Line} <<<<<", line);
+
+        // 回包；读和写复用同一个 session。
+        await session.WriteAsync($"echo: {line}", context.ConnectionClosed);
     }
 }
 ```

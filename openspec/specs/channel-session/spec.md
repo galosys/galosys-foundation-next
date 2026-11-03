@@ -195,7 +195,7 @@ The implementation SHALL provide `MessageChannelOptions` in the `Microsoft.Exten
 
 ### Requirement: 示例迁移
 
-The `NetServer.ConsoleApp` sample SHALL create its message session with `context.AsLineTextSession()` inside the terminal handler only, using `LineFramer` and `Utf8StringCodec`. It MUST keep listening on `0.0.0.0:8000`, print each received line as `>>>>> {line} <<<<<`, send `hello\n` once per second from `SenderBootstrapper`, and shut down gracefully on Ctrl+C. The sample README MUST document a manual verification that splits a multibyte UTF-8 character across two writes and expects the complete character in the log. This requirement MUST NOT change the `channel-hosting` capability.
+The `NetServer.ConsoleApp` sample SHALL create its message session with `context.AsLineTextSession()` inside the terminal handler only, using `LineFramer` and `Utf8StringCodec`. It MUST keep listening on `0.0.0.0:8000`, print each received line as `>>>>> {line} <<<<<`, and shut down gracefully on Ctrl+C. The sample MUST demonstrate the framework client side: it SHALL use `ChannelClient` (or `ChannelClientPool` in pool mode) instead of a raw socket, SHALL echo each received line back to the client, and MUST cover reconnect with exponential backoff and batch writing. The sample README MUST document a manual verification that splits a multibyte UTF-8 character across two writes and expects the complete character in the log. This requirement MUST NOT change the `channel-hosting` capability.
 
 #### Scenario: 行文本会话替换原始字节读取
 
@@ -204,12 +204,24 @@ The `NetServer.ConsoleApp` sample SHALL create its message session with `context
 - **AND** 日志输出 `>>>>> hello <<<<<`
 - **AND** handler 不再按读取块直接调用 `Encoding.UTF8.GetString`
 
-#### Scenario: 发送端每秒发送带换行的 hello
+#### Scenario: 服务端回包形成请求响应往返
 
-- **WHEN** 示例启动并连接本机 8000 端口
-- **THEN** `SenderBootstrapper` 每秒发送一次 `hello\n`
-- **AND** 示例每秒打印一条 `>>>>> hello <<<<<`
-- **AND** 逻辑消息仍然是 `hello`，换行只作为行协议边界
+- **WHEN** 服务端读到一行 `hello`
+- **THEN** 服务端用同一个会话回写 `echo: hello`
+- **AND** 客户端读到并打印 `echo: hello`
+
+#### Scenario: 发送端使用框架客户端
+
+- **WHEN** 检查 `SenderBootstrapper` 与 `PoolSenderBootstrapper`
+- **THEN** 它们使用 `ChannelClient` / `ChannelClientPool` 而不是裸 `Socket`
+- **AND** 单连接模式配置了 `ChannelReconnectPolicy` 并订阅 `StateChanged` 打印状态迁移
+- **AND** 前几轮使用 `WriteBatchAsync` 批量发送
+
+#### Scenario: 单连接模式下每轮复用同一个会话
+
+- **WHEN** 客户端在同一连接上连续发送多轮
+- **THEN** 每轮复用同一个会话而不是重新创建
+- **AND** 重连后因连接引用变化而重建会话
 
 #### Scenario: 多字节 UTF-8 跨两次写入
 
@@ -222,7 +234,8 @@ The `NetServer.ConsoleApp` sample SHALL create its message session with `context
 
 - **WHEN** 检查示例的 `Program.cs`、`ChannelServerRunner` 和 pipeline 配置
 - **THEN** 这些位置都不调用 `AsSession`/`AsLineTextSession`
-- **AND** session 只在 `SampleChannelHandler.HandleAsync` 内创建
+- **AND** server 侧的 session 只在 `SampleChannelHandler.HandleAsync` 内创建
+- **AND** client 侧的 session 只在 `ChannelSender` 构造时针对具体连接创建
 
 #### Scenario: Ctrl+C 优雅停机
 
@@ -235,7 +248,8 @@ The `NetServer.ConsoleApp` sample SHALL create its message session with `context
 - **WHEN** 阅读 `samples/NetServer.ConsoleApp/README.md`
 - **THEN** 可以找到启动示例、另开客户端、分两次写入 `"你好\n"` 的 PowerShell 命令
 - **AND** 文档给出预期日志 `>>>>> 你好 <<<<<`
-- **AND** 文档说明 sender 的 `hello` 日志会同时出现
+- **AND** 文档说明 sender 的 `hello-N` 日志会同时出现
+- **AND** 文档给出把两端拆成两个进程以观察重连的步骤
 
 ### Requirement: 批量写入扩展契约
 
