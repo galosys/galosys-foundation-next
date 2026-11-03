@@ -22,7 +22,7 @@
 | `MafSample.ConsoleApp` | `samples/MafSample.ConsoleApp/` | 示例（Worker Service） | 模块化 Worker：Channel + Rx 窗口批处理；`ProcessBatchAsync` 尚未实现。 |
 | `MafSample.WpfApp` | `samples/MafSample.WpfApp/` | 示例（WPF） | 基于 `ChromeWindow` 导航，菜单树来自 `appsettings.json` 的 `Menu` 节。 |
 | `NatsSample.ConsoleApp` | `samples/NatsSample.ConsoleApp/` | 示例（控制台） | NATS 发布/订阅，连接 `nats://127.0.0.1:4222`，依赖本地 NATS。 |
-| `NetServer.ConsoleApp` | `samples/NetServer.ConsoleApp/` | 示例（控制台） | Channel 的服务端示例，监听 `0.0.0.0:8000`；见 [README](samples/NetServer.ConsoleApp/README.md)。 |
+| `NetServer.ConsoleApp` | `samples/NetServer.ConsoleApp/` | 示例（控制台） | Channel 双向示例：服务端回包 + 框架客户端收发、重连退避、连接池、批量写；见 [README](samples/NetServer.ConsoleApp/README.md)。 |
 | `Galosys.Foundation.Channel` | `src/Galosys.Foundation.Channel/` | 本地类库 | 逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端；见 [README](src/Galosys.Foundation.Channel/README.md)。 |
 | `Galosys.Foundation.Doris` | `src/Galosys.Foundation.Doris/` | 本地类库 | Doris `_stream_load` 的 HTTP 客户端，默认 FE HTTP 端口 `8030`。 |
 | `Galosys.Foundation.DurableTask.Core` | `src/Galosys.Foundation.DurableTask.Core/` | 本地类库 | Durable Task 编排/活动封装：DI 注册 + 宿主生命周期适配 + TaskHubClient 扩展。[README](src/Galosys.Foundation.DurableTask.Core/README.md) |

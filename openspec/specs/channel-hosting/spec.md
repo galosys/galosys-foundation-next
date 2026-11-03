@@ -65,13 +65,19 @@ The implementation SHALL satisfy this requirement. 当 `ChannelServer` 构造时
 
 ### Requirement: 示例迁移行为等价
 
-The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须使用 `ChannelServer` + `ChannelServerRunner` 托管服务器，保持监听 `0.0.0.0:8000`、打印收到的文本、每秒发送 `hello` 的现有行为，并在 Ctrl+C 时优雅停机。
+The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须使用 `ChannelServer` + `ChannelServerRunner` 托管服务器，保持监听 `0.0.0.0:8000`、打印收到的文本、周期性地发送请求并在 Ctrl+C 时优雅停机。
 
-#### Scenario: 启动后打印 hello
+#### Scenario: 启动后周期性打印收到的文本
 
 - **WHEN** 运行 `dotnet run --project samples/NetServer.ConsoleApp/NetServer.ConsoleApp.csproj`
-- **THEN** 控制台每秒输出一条包含 `hello` 的日志
+- **THEN** 控制台每秒输出一条包含收到的文本的日志
 - **AND** 监听端口为 8000
+
+#### Scenario: 服务端托管在发送端之前启动
+
+- **WHEN** 检查示例的 hosted service 注册顺序
+- **THEN** `ChannelServerRunner` 先于发送端的 hosted service 注册
+- **AND** 客户端连接时监听已经就绪
 
 #### Scenario: Ctrl+C 优雅退出
 
