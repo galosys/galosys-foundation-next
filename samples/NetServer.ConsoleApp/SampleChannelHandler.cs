@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Logging;
 
 namespace NetServer.ConsoleApp

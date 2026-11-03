@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<PackageReference Include="microsoft.extensions.dependencyinjection.abstractions" />
+		<PackageReference Include="microsoft.extensions.hosting.abstractions"  />
+		<PackageReference Include="microsoft.extensions.logging.abstractions"  />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Galosys.Foundation.Channel.Tests" />
+	</ItemGroup>
+
+</Project>

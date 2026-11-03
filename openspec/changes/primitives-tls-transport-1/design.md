@@ -183,8 +183,8 @@ using var certificate = request.CreateSelfSigned(
 2. 新增 `TlsTestCertificates`，再实现 `SslStreamDuplexPipe`；用内存 `Pipe` 验证 `Stream` 适配器的读写与不释放底层。
 3. 实现 `TlsDuplexPipe.CreateAsync` 的握手与读泵，跑通服务端/客户端握手。
 4. 实现写泵、`ShutdownAsync`、半关闭与 `DisposeAsync`，补齐关闭/刷新测试。
-5. 更新 Primitives README 的 TLS 章节，说明本阶段只有适配器，没有 `UseTls`。
-6. 跑 Primitives 构建与全量测试；若失败，回滚新增文件和 README 即可，现有传输代码不变。
+5. 更新 Channel README 的 TLS 章节，说明本阶段只有适配器，没有 `UseTls`。
+6. 跑 Channel 构建与全量测试；若失败，回滚新增文件和 README 即可，现有传输代码不变。
 
 ## Open Questions
 

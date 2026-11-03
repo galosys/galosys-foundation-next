@@ -81,7 +81,7 @@ The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须
 
 ### Requirement: 多服务器注册
 
-`ChannelServerDefinition` MUST be public sealed in `Microsoft.Extensions.Hosting.Net` with a non-empty `Name`, snapshotted options, and a pipeline delegate, rejecting blank names, null options, and null delegates. `AddChannelServer` MUST append a singleton without global options. `AddChannelServerGroup` MUST idempotently register one group and one hosted service built from all definitions with the container's `ILoggerFactory` and `IServiceScopeFactory`.
+`ChannelServerDefinition` MUST be public sealed in `Galosys.Foundation.Channel` with a non-empty `Name`, snapshotted options, pipeline delegate, rejecting blank names, null options or delegates; `AddChannelServer` MUST append a singleton, no global options; `AddChannelServerGroup` MUST idempotently register group and hosted service from definitions with container's `ILoggerFactory`/`IServiceScopeFactory`; `ChannelServerGroupHostedService` MUST be public sealed in `Microsoft.Extensions.Hosting`.
 
 #### Scenario: 两个定义绑定独立端点
 

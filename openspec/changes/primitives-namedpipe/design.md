@@ -22,7 +22,7 @@ P5 要补上 NamedPipe 服务端。NamedPipe 与 TCP 的差异集中在绑定和
 - 用 `NamedPipeServerStream` + `PipeReader.Create` / `PipeWriter.Create` 实现 NamedPipe listener 与 connection，复用现有 `DuplexPipe`、`IChannelConnection` 和 `ChannelContext`。
 - 保持与 TCP 一致的 accept、每连接 scope、`MaxConnections`、优雅停机、取消和释放语义。
 - 用 Windows 上可重复的测试锁定回显、并发连接、管道占用、停机和校验行为。
-- 在 Primitives README 中给出可直接照抄的 NamedPipe 服务端与客户端用法。
+- 在 Channel README 中给出可直接照抄的 NamedPipe 服务端与客户端用法。
 
 **Non-Goals:**
 
@@ -54,7 +54,7 @@ namespace Microsoft.Extensions.Options
 public ChannelTransportKind Transport { get; set; } = ChannelTransportKind.Tcp;
 ```
 
-NamedPipe 端点单独建模，放在 `Microsoft.Extensions.Hosting.Net`：
+NamedPipe 端点单独建模，放在 `Galosys.Foundation.Channel`：
 
 ```csharp
 public sealed class NamedPipeEndPoint : EndPoint
@@ -213,15 +213,15 @@ await client.ConnectAsync(TestWaits.DefaultTimeout, ct);
 
 ## Migration Plan
 
-1. 在 `Microsoft/Extensions/Options/` 增加 `ChannelTransportKind`，在 `Microsoft/Extensions/Hosting/Net/` 增加 `NamedPipeEndPoint`；补 XML 文档与构造校验。
+1. 在 `Microsoft/Extensions/Options/` 增加 `ChannelTransportKind`，在 `Galosys/Foundation/Channel/` 增加 `NamedPipeEndPoint`；补 XML 文档与构造校验。
 2. 修改 `ChannelServerOptions`：增加 `Transport`，在 `Validate` 中加入传输/端点匹配与 `CreateBoundListenSocket` 校验；`Clone` 复制新属性。
 3. 增加 `IChannelListenerFactory`、`ChannelListenerFactory`、`SocketChannelListenerFactory`，把现有 `SocketChannelListener.BindAsync` 包装成工厂。
 4. 修改 `ChannelServerCore`：构造时解析工厂，`StartAsync` 通过工厂绑定；TCP 路径行为不变。
 5. 增加 `NamedPipeChannelConnection` 与 `NamedPipeChannelListener`，先完成连接属性和 Pipe 组合，再补 abort/dispose 与 accept/unbind。
 6. 增加 `NamedPipeTestSupport` 与 `NamedPipeTransportTests`，按回显、并发、占用、停机、取消、校验的顺序补齐。
 7. 在 `NamespaceConventionTests` 中断言 `IChannelListener`、`IChannelConnection` 及具体 NamedPipe 类型不是 public。
-8. 更新 Primitives README，加入 NamedPipe 配置、客户端示例、Windows/唯一名称/RemoteEndPoint 说明。
-9. 运行 Primitives 构建、NamedPipe 过滤测试、全量测试与 `openspec validate`。
+8. 更新 Channel README，加入 NamedPipe 配置、客户端示例、Windows/唯一名称/RemoteEndPoint 说明。
+9. 运行 Channel 构建、NamedPipe 过滤测试、全量测试与 `openspec validate`。
 
 回滚策略：删除 NamedPipe 文件、工厂与新增 options 属性，恢复 `ChannelServerCore` 直接调用 `SocketChannelListener.BindAsync`。TCP 的 listener/connection 未被修改，回滚不影响现有 socket 行为；NamedPipe 不涉及持久化状态。
 

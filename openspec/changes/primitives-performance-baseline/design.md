@@ -35,11 +35,11 @@ P5 已经包含 NamedPipe 与 Diagnostics。NamedPipe 会新增一条 transport 
 
 ### 1. 独立 `benchmarks/` 项目，不加入 `.slnx`
 
-项目放在 `benchmarks/Galosys.Foundation.Primitives.Benchmarks/`，与 `src/`、`tests/`、`samples/` 平级：
+项目放在 `benchmarks/Galosys.Foundation.Channel.Benchmarks/`，与 `src/`、`tests/`、`samples/` 平级：
 
 ```text
-benchmarks/Galosys.Foundation.Primitives.Benchmarks/
-  Galosys.Foundation.Primitives.Benchmarks.csproj
+benchmarks/Galosys.Foundation.Channel.Benchmarks/
+  Galosys.Foundation.Channel.Benchmarks.csproj
   Program.cs
   Benchmarks/
     EchoRoundTripBenchmarks.cs
@@ -57,7 +57,7 @@ benchmarks/Galosys.Foundation.Primitives.Benchmarks/
   README.md
 ```
 
-项目使用 `OutputType=Exe`、`net10.0`、`IsPackable=false`，只引用 Primitives 与 `BenchmarkDotNet 0.15.8`。`0.15.8` 是当前支持 .NET 10 的稳定版本，固定版本避免不同机器还原到不同 BDN 行为。
+项目使用 `OutputType=Exe`、`net10.0`、`IsPackable=false`，只引用 Channel 与 `BenchmarkDotNet 0.15.8`。`0.15.8` 是当前支持 .NET 10 的稳定版本，固定版本避免不同机器还原到不同 BDN 行为。
 
 不修改 `Galosys.Foundation.Next.slnx`：该文件包含不可编译的 `Galosys.Foundation.Nats.Net`，把 benchmark 加进去不会让整体构建变得可用。README 给出单项目命令。
 
@@ -144,7 +144,7 @@ BDN 的 `[MemoryDiagnoser]` 仍会统计 framer/codec/session 真实产生的分
 基准类只加 `[MemoryDiagnoser]`，不强行指定 iteration 数，使用 BDN 默认 Job 以获得带统计置信区间的结果。完整运行可能需要十几分钟；开发时用：
 
 ```powershell
-dotnet run --project benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry
+dotnet run --project benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release -- --filter "*Framing*" --job dry
 ```
 
 `--job dry` 只验证基准能启动、连接能建立、方法能执行，不产生可用于比较的基线数据。README 区分“冒烟”和“基线”两种运行方式。

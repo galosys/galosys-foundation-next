@@ -15,10 +15,10 @@
     <Project Path="src/Galosys.Foundation.Azure.DurableTask.Core/Galosys.Foundation.Azure.DurableTask.Core.csproj" Id="6d66d934-769c-494a-9ec6-684694597db9" />
     <Project Path="src/Galosys.Foundation.Doris/Galosys.Foundation.Doris.csproj" Id="f079b074-cc52-469b-bb37-b68ea622fce1" />
     <Project Path="src/Galosys.Foundation.Nats.Net/Galosys.Foundation.Nats.Net.csproj" Id="55fed2f9-5bc7-4972-9597-b28d201c5f31" />
-    <Project Path="src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj" Id="8341af14-392f-441c-bf48-bfad24c7b15e" />
+    <Project Path="src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj" Id="8341af14-392f-441c-bf48-bfad24c7b15e" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj" />
+    <Project Path="tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj" />
   </Folder>
   <Folder Name="/解决方案项/">
     <File Path="Directory.Build.props" />

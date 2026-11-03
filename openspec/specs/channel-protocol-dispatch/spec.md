@@ -7,7 +7,7 @@
 
 ### Requirement: 协议契约
 
-The implementation SHALL provide public interfaces `IChannelProtocol` and `IChannelProtocolSelector` in the `Microsoft.Extensions.Hosting.Net` namespace. `IChannelProtocol` MUST expose a non-empty `Name` and a `HandleAsync(ChannelContext, CancellationToken)` method returning `ValueTask`. `IChannelProtocolSelector` MUST expose `SelectAsync(ChannelContext, CancellationToken)` returning `ValueTask<IChannelProtocol?>`.
+The implementation SHALL provide public interfaces `IChannelProtocol` and `IChannelProtocolSelector` in the `Galosys.Foundation.Channel` namespace. `IChannelProtocol` MUST expose a non-empty `Name` and a `HandleAsync(ChannelContext, CancellationToken)` method returning `ValueTask`. `IChannelProtocolSelector` MUST expose `SelectAsync(ChannelContext, CancellationToken)` returning `ValueTask<IChannelProtocol?>`.
 
 #### Scenario: 协议实现可被选择
 

@@ -10,8 +10,8 @@
   foundation 类库用 `dotnet build src/<Project>/<Project>.csproj`。
   `dotnet build Galosys.Foundation.Next.slnx` 会失败：`Galosys.Foundation.Nats.Net` 是无法编译的原型，
   而 `NatsSample.ConsoleApp` 引用了它。
-- 测试项目只有 `tests/Galosys.Foundation.Primitives.Tests`（xUnit）：
-  `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`。
+- 测试项目只有 `tests/Galosys.Foundation.Channel.Tests`（xUnit）：
+  `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`。
 - 运行：`dotnet run --project samples/<Project>/<Project>.csproj`。多数示例是长期运行的 `BackgroundService`，
   需 Ctrl+C 退出。
 - `MafSample.API` 没有外部基础设施无法启动：PostgreSQL `:15432`、Redis `:6379`、RocketMQ `:8081`
@@ -21,19 +21,20 @@
 ## 架构事实
 
 - **目录约定**：`samples/` 放示例项目，`src/` 只放 foundation 类库，`tests/` 放测试。
-- **命名空间寄生**：foundation 类库的 `*Options` 放 `Microsoft.Extensions.Options`，`IServiceCollection` / `IServiceProvider` DI 扩展放 `Microsoft.Extensions.DependencyInjection`；核心宿主类型继续留在 `Microsoft.Extensions.Hosting.Net`。
+- **命名空间寄生**：foundation 类库的 `*Options` 放 `Microsoft.Extensions.Options`，`IServiceCollection` / `IServiceProvider` DI 扩展放 `Microsoft.Extensions.DependencyInjection`；Channel 类库的核心类型放在 `Galosys.Foundation.Channel`。
 - **两种宿主风格**：模块化应用（`MafSample.API`、`MafSample.ConsoleApp`、`AopSample`、`NatsSample`）
   调用 `UseModularization()` 并提供 `internal class InternalModule : IModule`；其余（`Adapter`、`NetServer`、
   `DataIngestionSample`）使用普通的 `Host.CreateApplicationBuilder`/`WebApplication.CreateBuilder`。
 - **特性驱动 DI**：`[Service]`、`[HostedService]`、`[Query]`、`[Handler]`、`[DbContext]`、`[AmqpHandler]`
   由程序集扫描发现，再手写 `AddSingleton`/`AddHostedService` 通常多余；`InternalModule` 只用于特性表达不了
   的注册（如 `AddCqrs()`、`AddStateMachine(...)`）。
-- **本地类库**：`Galosys.Foundation.Primitives`（TCP + `System.IO.Pipelines` 服务端基架，核心类型用
-  `Microsoft.Extensions.Hosting.Net`，Options 类型用 `Microsoft.Extensions.Options`；多服务器组合用
+- **本地类库**：`Galosys.Foundation.Channel`（逻辑通道传输框架（socket 传输 + 分帧编解码 + 客户端/服务端），
+  核心类型用 `Galosys.Foundation.Channel`，Options 类型用 `Microsoft.Extensions.Options`；多服务器组合用
   `ChannelServerGroup`，宿主注册用 `AddChannelServer(definition)` + `AddChannelServerGroup()`；
-  消息层用 `Framing/` 的 `IMessageFramer`、`Codecs/` 的 `IMessageCodec<T>` 和 `Session/` 的
+  消息层用 `Galosys/Foundation/Channel/Framing/` 的 `IMessageFramer`、`Galosys/Foundation/Channel/Codecs/` 的
+  `IMessageCodec<T>` 和 `Galosys/Foundation/Channel/Session/` 的
   `IChannelSession<T>`（`AsLineTextSession`/`AsJsonSession` 组合入口，批量写用 `WriteBatchAsync`）；
-  客户端用 `Client/` 的 `ChannelClient`（重连退避）与 `ChannelClientPool`（有界连接池））、
+  客户端用 `Galosys/Foundation/Channel/Client/` 的 `ChannelClient`（重连退避）与 `ChannelClientPool`（有界连接池））、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
   `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）。
 - `samples/MafSample.ConsoleApp/Microsoft/Extensions/Hosting/WindowedBatchWorker.cs` 是本地辅助类，不是包里的类型。

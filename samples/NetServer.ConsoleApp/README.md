@@ -1,6 +1,6 @@
 # NetServer.ConsoleApp
 
-`Galosys.Foundation.Primitives` 的服务端示例：监听 `0.0.0.0:8000`，通过
+`Galosys.Foundation.Channel` 的服务端示例：监听 `0.0.0.0:8000`，通过
 `context.AsLineTextSession()` 按行读取并打印 UTF-8 文本，同时每秒向本机 8000 端口发送 `hello\n`。
 
 ## 运行

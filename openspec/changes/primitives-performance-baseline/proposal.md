@@ -6,7 +6,7 @@ P1/P2 的 transport、framing、JSON codec 与 session 只有正确性测试，�
 
 ## What Changes
 
-- 新建 `benchmarks/Galosys.Foundation.Primitives.Benchmarks/`，目标 `net10.0`，引用 `Galosys.Foundation.Primitives`，使用固定版本 `BenchmarkDotNet 0.15.8`。
+- 新建 `benchmarks/Galosys.Foundation.Channel.Benchmarks/`，目标 `net10.0`，引用 `Galosys.Foundation.Channel`，使用固定版本 `BenchmarkDotNet 0.15.8`。
 - 新增共享基准设施：`LoopbackServer`（启动绑定 `127.0.0.1:0` 的 `ChannelServer`，暴露实际端口）、`RawEchoClient`、`SessionEchoClient` 和固定 payload 生成器；连接在 `GlobalSetup` 建立、`GlobalCleanup` 关闭，避免把连接建立计入每次操作。
 - 新增四组基准：
   - `EchoRoundTripBenchmarks`：原始字节回显，payload 64 B / 4 KiB / 64 KiB。
@@ -24,7 +24,7 @@ P1/P2 的 transport、framing、JSON codec 与 session 只有正确性测试，�
 
 ### New Capabilities
 
-- `channel-performance`: 提供可复现的 Primitives 性能基准工程、四类核心场景、结果记录规范和优化决策门。
+- `channel-performance`: 提供可复现的 Channel 性能基准工程、四类核心场景、结果记录规范和优化决策门。
 
 ### Modified Capabilities
 
@@ -32,9 +32,9 @@ P1/P2 的 transport、framing、JSON codec 与 session 只有正确性测试，�
 
 ## Impact
 
-- 代码：仅新增 `benchmarks/Galosys.Foundation.Primitives.Benchmarks/`（项目文件、`Program.cs`、`Benchmarks/`、`Infrastructure/`、`README.md`、`results/README.md`）；修改根 `README.md` 增加入口。
+- 代码：仅新增 `benchmarks/Galosys.Foundation.Channel.Benchmarks/`（项目文件、`Program.cs`、`Benchmarks/`、`Infrastructure/`、`README.md`、`results/README.md`）；修改根 `README.md` 增加入口。
 - 公共 API：无变更；benchmark 项目不是可打包产物（`IsPackable=false`）。
-- 依赖：仅 benchmark 项目新增 `BenchmarkDotNet 0.15.8`；`src/Galosys.Foundation.Primitives` 不新增包。
-- 构建：`dotnet build benchmarks/Galosys.Foundation.Primitives.Benchmarks/Galosys.Foundation.Primitives.Benchmarks.csproj -c Release` 独立验证；不加入不可构建的 `.slnx`。
+- 依赖：仅 benchmark 项目新增 `BenchmarkDotNet 0.15.8`；`src/Galosys.Foundation.Channel` 不新增包。
+- 构建：`dotnet build benchmarks/Galosys.Foundation.Channel.Benchmarks/Galosys.Foundation.Channel.Benchmarks.csproj -c Release` 独立验证；不加入不可构建的 `.slnx`。
 - 前置：需要 P1.5a 的 `ChannelServer` 与 P2 的 `LengthPrefixedFramer`、`JsonMessageCodec<T>`、`AsJsonSession<T>()` 已落地；否则 benchmark 项目无法编译。
 - 验证：Release 构建、`--job dry` 冒烟、`openspec validate "primitives-performance-baseline" --strict --no-interactive`；完整基准运行是维护者手动步骤，不纳入任务完成条件。

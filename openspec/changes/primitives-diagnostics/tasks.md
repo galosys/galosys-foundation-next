@@ -16,8 +16,8 @@
 - [ ] 1.1 增加 `ChannelDiagnosticsOptions` 与 `ChannelDiagnostics` 名称常量
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelDiagnosticsOptions.cs`
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Diagnostics/ChannelDiagnostics.cs`
+- Create: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelDiagnosticsOptions.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Diagnostics/ChannelDiagnostics.cs`
 
 **Step 1: 选项类型**
 
@@ -48,13 +48,13 @@ namespace Microsoft.Extensions.Options
 **Step 2: 公共名称常量**
 
 ```csharp
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
-    /// <summary>Primitives 的 ActivitySource/Meter 名称、活动和标签常量。</summary>
+    /// <summary>Channel 的 ActivitySource/Meter 名称、活动和标签常量。</summary>
     public static class ChannelDiagnostics
     {
-        public const string SourceName = "Galosys.Foundation.Primitives";
-        public const string MeterName = "Galosys.Foundation.Primitives";
+        public const string SourceName = "Galosys.Foundation.Channel";
+        public const string MeterName = "Galosys.Foundation.Channel";
 
         public const string ServerConnectionActivity = "ChannelServer.Connection";
         public const string SessionReadActivity = "ChannelSession.Read";
@@ -83,13 +83,13 @@ namespace Microsoft.Extensions.Hosting.Net
 }
 ```
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 - [ ] 1.2 增加 internal ActivitySource/Meter、instrument 与防空分配 helper
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Diagnostics/ChannelDiagnostics.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Diagnostics/ChannelDiagnostics.cs`
 
 **Step 1: 增加静态字段**
 
@@ -98,7 +98,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     public static partial class ChannelDiagnostics
     {
@@ -147,7 +147,7 @@ internal static string GetTransportName(EndPoint? endPoint)
         IPEndPoint => "tcp",
         null => "unknown",
         { } value when value.GetType().FullName
-            == "Microsoft.Extensions.Hosting.Net.NamedPipeEndPoint" => "namedpipe",
+            == "Galosys.Foundation.Channel.NamedPipeEndPoint" => "namedpipe",
         _ => "other",
     };
 
@@ -213,14 +213,14 @@ internal static void SetError(Activity? activity, Exception exception)
 
 文件顶部补 `using Microsoft.Extensions.Options;`。`ChannelDiagnostics` 是 static class，使用 `partial` 便于后续任务追加 helper。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 - [ ] 1.3 把诊断选项接入 `ChannelServerOptions` 与 `MessageChannelOptions`
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/ChannelServerOptions.cs`
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Options/MessageChannelOptions.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/ChannelServerOptions.cs`
+- Modify: `src/Galosys.Foundation.Channel/Microsoft/Extensions/Options/MessageChannelOptions.cs`
 
 **Step 1: 服务端选项**
 
@@ -247,7 +247,7 @@ public ChannelDiagnosticsOptions Diagnostics { get; set; } = new();
 
 `ChannelServerOptions.Clone()` 必须复制 `Diagnostics`，否则两个 server 会共享同一个可变选项。`MessageChannelOptions` 由 session 在创建时读取；文档要求创建 session 后不要再修改。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors（`MessageChannelOptions` 依赖 P2 已落地）。
 
 ## 2. 服务端埋点
@@ -255,7 +255,7 @@ Expected: 0 errors（`MessageChannelOptions` 依赖 P2 已落地）。
 - [ ] 2.1 在 accept loop 增加接受/拒绝/错误指标
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/ChannelServerCore.cs`
 
 **Step 1: 缓存 transport 名称**
 
@@ -320,13 +320,13 @@ internal static void RecordAcceptError(string transport)
 
 `RecordConnectionAccepted` 放在 `connection is null` 检查和 `MaxConnections` 检查之后，确保被拒绝的连接不会同时计入 accepted。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 - [ ] 2.2 为每个连接创建 `ChannelServer.Connection` 活动与时长/活动连接数
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/ChannelServerCore.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/ChannelServerCore.cs`
 
 **Step 1: 在 `ProcessConnectionAsync` 开头启动**
 
@@ -413,7 +413,7 @@ internal static void RecordConnectionDuration(
 
 `using var activity` 必须在方法作用域内，确保 handler 结束、`Dispose` 触发 activity 停止。不要在 `ProcessConnectionAsync` 的早期 return 之前漏掉 `RecordConnectionActive(-1)`；现有方法只有一个 finally，保持在该 finally 中。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 ## 3. 消息会话与 framing 埋点
@@ -421,8 +421,8 @@ Expected: 0 errors。
 - [ ] 3.1 在 `ChannelSession<T>.ReadAsync` / `WriteAsync` 增加活动和消息指标
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Session/ChannelSession.cs`
-- Modify: `src/Galosys.Foundation.Primitives/Session/ChannelContextSessionExtensions.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Session/ChannelSession.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Session/ChannelContextSessionExtensions.cs`
 
 **Step 1: session 保存协议名与诊断选项**
 
@@ -553,13 +553,13 @@ internal static void RecordSessionError(string protocol, string direction, strin
 
 `AsJsonSession<T>()` 在创建 options 时设置 `ProtocolName = "json"`，`AsLineTextSession()` 设置 `"line"`；`AsSession()` 使用调用方提供的 `MessageChannelOptions`，为空时新建默认 `"custom"`。不要把 codec 类型名作为 protocol 标签。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 - [ ] 3.2 在 `IMessageFramer.Parse` 周围记录 framing 时长
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/Session/ChannelSession.cs`
+- Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Session/ChannelSession.cs`
 
 **Step 1: 只在有监听器时计时**
 
@@ -597,7 +597,7 @@ internal static void RecordFramingDuration(string protocol, TimeSpan elapsed)
 
 如果 `Parse` 抛异常，不要记录成功时长；让 3.1 的 catch 记录 `session.errors` 并原样抛出。
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
 ## 4. 诊断测试
@@ -605,7 +605,7 @@ Expected: 0 errors。
 - [ ] 4.1 增加 ActivityListener/MeterListener 测试辅助并禁用并行
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/DiagnosticsTestSupport.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/DiagnosticsTestSupport.cs`
 
 **Step 1: 写入收集器**
 
@@ -614,7 +614,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 [CollectionDefinition("Diagnostics", DisableParallelization = true)]
 public sealed class DiagnosticsCollection
@@ -695,23 +695,23 @@ internal sealed class MetricCollector : IDisposable
 
 `ActivityCollector` 与 `MetricCollector` 必须在测试类构造/`using` 中创建；测试类加 `[Collection("Diagnostics")]`，避免全局 listener 捕获并行测试的活动。
 
-Run: `dotnet build tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
+Run: `dotnet build tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 0 errors。
 
 - [ ] 4.2 增加服务端连接活动测试
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/ServerDiagnosticsTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/ServerDiagnosticsTests.cs`
 
 **Step 1: 测试正常连接**
 
 ```csharp
 using System.Net;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 [Collection("Diagnostics")]
 public sealed class ServerDiagnosticsTests
@@ -763,13 +763,13 @@ public sealed class ServerDiagnosticsTests
 
 `Assert.Single(collection, predicate)` 返回匹配项；如果 xUnit 版本没有该重载，用 `Assert.Single(activities.Activities.Where(predicate))`。不要依赖 activity 的父子关系；这里只验证名称和标签。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~ServerDiagnosticsTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~ServerDiagnosticsTests`
 Expected: 测试通过；activity 包含 `transport=tcp`、`protocol=stream`、`outcome=ok`。
 
 - [ ] 4.3 增加错误活动与服务端指标测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/ServerDiagnosticsTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/ServerDiagnosticsTests.cs`
 
 **Step 1: 错误活动**
 
@@ -853,22 +853,22 @@ public async Task Connection_RecordsAcceptedActiveAndDurationMetrics()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~ServerDiagnosticsTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~ServerDiagnosticsTests`
 Expected: 三个服务端诊断测试通过；服务器在错误后仍能继续接受连接。
 
 - [ ] 4.4 增加 session 消息计数、大小直方图与 framing 时长测试
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/SessionDiagnosticsTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/SessionDiagnosticsTests.cs`
 
 **Step 1: 用 `AsLineTextSession` 做回显**
 
 ```csharp
 using System.Net;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 [Collection("Diagnostics")]
 public sealed class SessionDiagnosticsTests
@@ -943,21 +943,21 @@ public sealed class SessionDiagnosticsTests
 
 `AsLineTextSession()` 的 `ProtocolName` 应为 `"line"`；如果 P2 工厂没有设置，3.1 的 Step 4 负责补上。测试在连接关闭前读取回复，避免 session 在写完后立即结束导致指标来不及刷新。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~SessionDiagnosticsTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~SessionDiagnosticsTests`
 Expected: 测试通过；`protocol=line`，读写方向都有计数。
 
 - [ ] 4.5 增加无监听器时的 tag 零分配测试
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/DiagnosticsOverheadTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/DiagnosticsOverheadTests.cs`
 
 **Step 1: 测试守卫**
 
 ```csharp
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 [Collection("Diagnostics")]
 public sealed class DiagnosticsOverheadTests
@@ -1001,22 +1001,22 @@ public sealed class DiagnosticsOverheadTests
 
 如果 `ActivitySource.HasListeners()` 受其它并行测试影响，确认 `DiagnosticsCollection` 的 `DisableParallelization = true` 且所有诊断测试类都带 `[Collection("Diagnostics")]`。不要把分配上限设为 0；JIT 和运行时可能在循环中产生极少量分配。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~DiagnosticsOverheadTests`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~DiagnosticsOverheadTests`
 Expected: 两个测试通过；无监听器时不创建 activity/tag。
 
 ## 5. 文档与验证
 
-- [ ] 5.1 更新 Primitives README 的可观测性章节
+- [ ] 5.1 更新 Channel README 的可观测性章节
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/README.md`
+- Modify: `src/Galosys.Foundation.Channel/README.md`
 
 在“配置”章节后增加：
 
 ```markdown
 ## 可观测性
 
-ActivitySource 与 Meter 名称都是 `Galosys.Foundation.Primitives`。
+ActivitySource 与 Meter 名称都是 `Galosys.Foundation.Channel`。
 
 ```csharp
 using var activityListener = new ActivityListener
@@ -1055,18 +1055,18 @@ meterListener.Start();
 - 客户端重连指标留给 P4 客户端落地后的独立 change；本版本不提供客户端 instrument。
 ```
 
-Run: `Select-String -Path src/Galosys.Foundation.Primitives/README.md -Pattern "可观测性"`
+Run: `Select-String -Path src/Galosys.Foundation.Channel/README.md -Pattern "可观测性"`
 Expected: 能匹配到新增章节标题。
 
 - [ ] 5.2 构建、跑诊断/全量测试并校验 OpenSpec
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter FullyQualifiedName~Diagnostics`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter FullyQualifiedName~Diagnostics`
 Expected: `ServerDiagnosticsTests`、`SessionDiagnosticsTests`、`DiagnosticsOverheadTests` 全部通过。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 既有测试全部通过，协议与异常行为无变化。
 
 Run: `openspec validate "primitives-diagnostics" --strict --no-interactive`

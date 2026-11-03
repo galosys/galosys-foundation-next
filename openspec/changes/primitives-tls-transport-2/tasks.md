@@ -16,7 +16,7 @@
 - [ ] 1.1 写 `UseTls` 失败测试
 
 **Files:**
-- Create: `tests/Galosys.Foundation.Primitives.Tests/TlsServerIntegrationTests.cs`
+- Create: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
 
 ```csharp
 using System.Net;
@@ -24,10 +24,10 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Extensions.Hosting.Net;
+using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Options;
 
-namespace Galosys.Foundation.Primitives.Tests;
+namespace Galosys.Foundation.Channel.Tests;
 
 public sealed class TlsServerIntegrationTests
 {
@@ -72,18 +72,18 @@ public sealed class TlsServerIntegrationTests
 
 **Step 2: 运行测试，确认编译失败**
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~TlsServerIntegrationTests"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~TlsServerIntegrationTests"`
 Expected: 编译失败，提示 `UseTls` 不存在（这是本任务的“红”）。
 
 - [ ] 1.2 新增 `TlsPipelineExtensions`
 
 **Files:**
-- Create: `src/Galosys.Foundation.Primitives/Microsoft/Extensions/Hosting/Net/Pipeline/TlsPipelineExtensions.cs`
+- Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Pipeline/TlsPipelineExtensions.cs`
 
 ```csharp
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Extensions.Hosting.Net
+namespace Galosys.Foundation.Channel
 {
     /// <summary>TLS 服务端管线扩展。</summary>
     public static class TlsPipelineExtensions
@@ -128,10 +128,10 @@ namespace Microsoft.Extensions.Hosting.Net
 
 - [ ] 1.3 构建并跑首个 TLS 回显测试
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~UseTls_EchoesBytes"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~UseTls_EchoesBytes"`
 Expected: 测试通过。
 
 ## 2. 集成行为测试
@@ -139,7 +139,7 @@ Expected: 测试通过。
 - [ ] 2.1 增加 TLS 测试客户端辅助类
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsTestCertificates.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsTestCertificates.cs`
 
 在文件末尾追加：
 
@@ -201,7 +201,7 @@ internal sealed class TlsServerTestClient : IAsyncDisposable
 - [ ] 2.2 增加证书拒绝与服务器恢复测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsServerIntegrationTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
 
 ```csharp
 [Fact]
@@ -272,13 +272,13 @@ private static ChannelServer CreateServer(
         });
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~CertificateRejected"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CertificateRejected"`
 Expected: 测试通过；handler 未执行，后续合法客户端仍可回显。
 
 - [ ] 2.3 增加管线顺序测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsServerIntegrationTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
 
 ```csharp
 [Fact]
@@ -354,13 +354,13 @@ public async Task TlsHandshake_RunsBeforeInnerMiddlewareAndHandler()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~TlsHandshake_RunsBeforeInnerMiddlewareAndHandler"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~TlsHandshake_RunsBeforeInnerMiddlewareAndHandler"`
 Expected: 测试通过；握手完成前 inner 中间件和 handler 都不执行。
 
 - [ ] 2.4 增加明文请求不泄漏测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsServerIntegrationTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
 
 ```csharp
 [Fact]
@@ -399,13 +399,13 @@ public async Task ClearTextRequest_DoesNotReachHandler()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~ClearTextRequest_DoesNotReachHandler"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~ClearTextRequest_DoesNotReachHandler"`
 Expected: 测试通过；明文请求没有回显，handler 未执行。
 
 - [ ] 2.5 增加 TLS 活跃时优雅停机测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsServerIntegrationTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
 
 ```csharp
 [Fact]
@@ -452,13 +452,13 @@ public async Task StopAsync_WaitsForTlsConnection_AndClientReadsEof()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~StopAsync_WaitsForTlsConnection"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~StopAsync_WaitsForTlsConnection"`
 Expected: 测试通过；`StopAsync` 等待 handler 完成，客户端读到 EOF。
 
 - [ ] 2.6 增加 handler 异常释放与 ALPN 透传测试
 
 **Files:**
-- Modify: `tests/Galosys.Foundation.Primitives.Tests/TlsServerIntegrationTests.cs`
+- Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
 
 ```csharp
 [Fact]
@@ -520,15 +520,15 @@ public async Task UseTls_PassesThroughAlpnSelection()
 }
 ```
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj --filter "FullyQualifiedName~HandlerException_DisposesTls|FullyQualifiedName~UseTls_PassesThroughAlpnSelection"`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~HandlerException_DisposesTls|FullyQualifiedName~UseTls_PassesThroughAlpnSelection"`
 Expected: 两个测试通过；handler 异常后服务器仍可接受新 TLS 连接，ALPN 协商为 `test-proto`。
 
 ## 3. 文档与验证
 
-- [ ] 3.1 更新 Primitives README 的 `UseTls` 章节
+- [ ] 3.1 更新 Channel README 的 `UseTls` 章节
 
 **Files:**
-- Modify: `src/Galosys.Foundation.Primitives/README.md`
+- Modify: `src/Galosys.Foundation.Channel/README.md`
 
 增加：
 
@@ -562,12 +562,12 @@ var server = new ChannelServer(options, pipeline =>
 - `NetServer.ConsoleApp` 保持明文示例，不在此 change 启用 TLS。
 ```
 
-- [ ] 3.2 跑 Primitives 构建与全量测试
+- [ ] 3.2 跑 Channel 构建与全量测试
 
-Run: `dotnet build src/Galosys.Foundation.Primitives/Galosys.Foundation.Primitives.csproj`
+Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
 
-Run: `dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj`
+Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 现有测试与新增 `TlsServerIntegrationTests` 全部通过。
 
 - [ ] 3.3 校验 OpenSpec artifact

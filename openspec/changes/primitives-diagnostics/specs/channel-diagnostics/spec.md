@@ -2,12 +2,12 @@
 
 ### Requirement: 稳定的诊断名称与低基数标签
 
-The implementation SHALL expose public constants for the `ActivitySource` name, `Meter` name, activity names, instrument names and tag names. The `ActivitySource` and `Meter` names MUST both be `Galosys.Foundation.Primitives`. Instrument and activity names MUST remain stable across releases; renaming an existing name is a breaking change. By default, activities and metrics MUST NOT include high-cardinality tags such as `connection.id`, `remote.endpoint` or `message.size`. `connection.id`, `remote.endpoint` and `message.size` MAY be enabled on activities through `ChannelDiagnosticsOptions`; metrics MUST NOT use these tags.
+The implementation SHALL expose public constants for the `ActivitySource` name, `Meter` name, activity names, instrument names and tag names. The `ActivitySource` and `Meter` names MUST both be `Galosys.Foundation.Channel`. Instrument and activity names MUST remain stable across releases; renaming an existing name is a breaking change. By default, activities and metrics MUST NOT include high-cardinality tags such as `connection.id`, `remote.endpoint` or `message.size`. `connection.id`, `remote.endpoint` and `message.size` MAY be enabled on activities through `ChannelDiagnosticsOptions`; metrics MUST NOT use these tags.
 
 #### Scenario: 稳定名称可被监听
 
 - **WHEN** 使用 `ActivityListener` 的 `ShouldListenTo` 判断 `source.Name == ChannelDiagnostics.SourceName`
-- **THEN** 可以接收到 Primitives 产生的 activity
+- **THEN** 可以接收到 Channel 产生的 activity
 - **AND** 使用 `MeterListener` 通过 `instrument.Meter.Name == ChannelDiagnostics.MeterName` 可以启用全部 instrument
 
 #### Scenario: 默认不采集高基数标签
@@ -94,7 +94,7 @@ All diagnostic entry points MUST check `ActivitySource.HasListeners()` before cr
 
 #### Scenario: 未附加监听器
 
-- **WHEN** 没有 `ActivityListener` 或 `MeterListener` 监听 Primitives
+- **WHEN** 没有 `ActivityListener` 或 `MeterListener` 监听 Channel
 - **THEN** 连接和消息处理继续正常工作
 - **AND** 诊断入口返回 null 或直接返回，不构造 tag 集合
 - **AND** 连续调用诊断入口不产生可测量的 tag 分配
@@ -113,7 +113,7 @@ All diagnostic entry points MUST check `ActivitySource.HasListeners()` before cr
 
 ### Requirement: 客户端指标显式后置
 
-This change MUST NOT add `ChannelClient`, `IChannelClient` or any placeholder client instrumentation. If the repository does not yet contain a P4 client type, client reconnect and connection-failure metrics MUST be omitted rather than implemented as dead code. When a P4 client is added later, client metrics MUST use the same `Galosys.Foundation.Primitives` meter name and a separate change.
+This change MUST NOT add `ChannelClient`, `IChannelClient` or any placeholder client instrumentation. If the repository does not yet contain a P4 client type, client reconnect and connection-failure metrics MUST be omitted rather than implemented as dead code. When a P4 client is added later, client metrics MUST use the same `Galosys.Foundation.Channel` meter name and a separate change.
 
 #### Scenario: 仓库没有客户端类型
 

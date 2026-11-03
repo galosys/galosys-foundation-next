@@ -9,6 +9,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Galosys.Foundation.Primitives\Galosys.Foundation.Primitives.csproj" />
+		<ProjectReference Include="..\..\src\Galosys.Foundation.Channel\Galosys.Foundation.Channel.csproj" />
 	</ItemGroup>
 </Project>

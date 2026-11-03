@@ -21,11 +21,11 @@
 | `MafSample.ConsoleApp` | `samples/MafSample.ConsoleApp/` | 示例（Worker Service） | 模块化 Worker：Channel + Rx 窗口批处理；`ProcessBatchAsync` 尚未实现。 |
 | `MafSample.WpfApp` | `samples/MafSample.WpfApp/` | 示例（WPF） | 基于 `ChromeWindow` 导航，菜单树来自 `appsettings.json` 的 `Menu` 节。 |
 | `NatsSample.ConsoleApp` | `samples/NatsSample.ConsoleApp/` | 示例（控制台） | NATS 发布/订阅，连接 `nats://127.0.0.1:4222`，依赖本地 NATS。 |
-| `NetServer.ConsoleApp` | `samples/NetServer.ConsoleApp/` | 示例（控制台） | Primitives 的服务端示例，监听 `0.0.0.0:8000`；见 [README](samples/NetServer.ConsoleApp/README.md)。 |
-| `Galosys.Foundation.Primitives` | `src/Galosys.Foundation.Primitives/` | 本地类库 | 自包含 TCP + `System.IO.Pipelines` 服务端基架；见 [README](src/Galosys.Foundation.Primitives/README.md)。 |
+| `NetServer.ConsoleApp` | `samples/NetServer.ConsoleApp/` | 示例（控制台） | Channel 的服务端示例，监听 `0.0.0.0:8000`；见 [README](samples/NetServer.ConsoleApp/README.md)。 |
+| `Galosys.Foundation.Channel` | `src/Galosys.Foundation.Channel/` | 本地类库 | 逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端；见 [README](src/Galosys.Foundation.Channel/README.md)。 |
 | `Galosys.Foundation.Doris` | `src/Galosys.Foundation.Doris/` | 本地类库 | Doris `_stream_load` 的 HTTP 客户端，默认 FE HTTP 端口 `8030`。 |
 | `Galosys.Foundation.Nats.Net` | `src/Galosys.Foundation.Nats.Net/` | 本地类库 | NATS 消费者扫描原型，当前不可编译。 |
-| `tests/Galosys.Foundation.Primitives.Tests` | `tests/Galosys.Foundation.Primitives.Tests/` | 测试（xUnit） | 覆盖 Primitives 的单元测试。 |
+| `tests/Galosys.Foundation.Channel.Tests` | `tests/Galosys.Foundation.Channel.Tests/` | 测试（xUnit） | 覆盖 Channel 的单元测试。 |
 
 ## 构建、测试与运行
 
@@ -39,7 +39,7 @@ dotnet build src/<Project>/<Project>.csproj
 运行测试：
 
 ```powershell
-dotnet test tests/Galosys.Foundation.Primitives.Tests/Galosys.Foundation.Primitives.Tests.csproj
+dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj
 ```
 
 运行示例：
@@ -75,7 +75,7 @@ API 监听 `http://localhost:5134`，Swagger 位于 `/swagger`。`MafSample.Adap
 |---|---|
 | `samples/` | 示例项目 |
 | `src/` | foundation 本地类库 |
-| `tests/` | xUnit 测试（目前仅覆盖 Primitives） |
+| `tests/` | xUnit 测试（目前仅覆盖 Channel） |
 | `openspec/` | 规格（`specs/`）与变更记录（`changes/`，含历史归档） |
 | `docs/superpowers/` | 设计文档（`specs/`） |
 | `.opencode/` | OpenCode 的命令与技能配置 |
@@ -96,6 +96,6 @@ API 监听 `http://localhost:5134`，Swagger 位于 `/swagger`。`MafSample.Adap
 
 ## 相关文档
 
-- [Galosys.Foundation.Primitives](src/Galosys.Foundation.Primitives/README.md)
+- [Galosys.Foundation.Channel](src/Galosys.Foundation.Channel/README.md)
 - [NetServer.ConsoleApp](samples/NetServer.ConsoleApp/README.md)
 - [OpenSpec 规格](openspec/specs/)
