@@ -1,4 +1,4 @@
-﻿namespace Galosys.Foundation.Azure.DurableTask.Core.DurableTask.Core
+﻿namespace Galosys.Foundation.DurableTask.Core.DurableTask.Core
 {
     /// <summary>
     /// 

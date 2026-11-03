@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
-	  <Compile Remove="DurableTask\Core\DurableTaskAttribute.cs" />
+	  <Compile Remove="Galosys\Foundation\DurableTask\Core\DurableTaskAttribute.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="galosys.foundation.core" />

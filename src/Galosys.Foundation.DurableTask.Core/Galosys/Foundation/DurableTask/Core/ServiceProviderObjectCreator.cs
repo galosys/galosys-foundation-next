@@ -1,4 +1,6 @@
-﻿namespace DurableTask.Core
+﻿using DurableTask.Core;
+
+namespace Galosys.Foundation.DurableTask.Core
 {
     internal class ServiceProviderObjectCreator<T>
         : ObjectCreator<T>

@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using DurableTask.Core;
+using Newtonsoft.Json;
 
-namespace DurableTask.Core
+namespace Galosys.Foundation.DurableTask.Core
 {
     /// <summary>
     /// 
