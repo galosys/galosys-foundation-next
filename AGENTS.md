@@ -24,7 +24,7 @@
 ## 架构事实
 
 - **目录约定**：`samples/` 放示例项目，`src/` 只放 foundation 类库，`tests/` 放测试。
-- **命名空间寄生**：foundation 类库的 `*Options` 放 `Microsoft.Extensions.Options`，`IServiceCollection` / `IServiceProvider` DI 扩展放 `Microsoft.Extensions.DependencyInjection`；Channel 类库的核心类型放在 `Galosys.Foundation.Channel`。
+- **命名空间寄生**：foundation 类库的 `*Options` 放 `Microsoft.Extensions.Options`，`IServiceCollection` / `IServiceProvider` DI 扩展放 `Microsoft.Extensions.DependencyInjection`；Channel 类库的核心类型放在 `Galosys.Foundation.Channel`，且不提供 DI 扩展与 hosted service。
 - **两种宿主风格**：模块化应用（`MafSample.API`、`MafSample.ConsoleApp`、`AopSample`、`NatsSample`）
   调用 `UseModularization()` 并提供 `internal class InternalModule : IModule`；其余（`Adapter`、`NetServer`、
   `DataIngestionSample`）使用普通的 `Host.CreateApplicationBuilder`/`WebApplication.CreateBuilder`。
@@ -33,7 +33,8 @@
   的注册（如 `AddCqrs()`、`AddStateMachine(...)`）。
 - **本地类库**：`Galosys.Foundation.Channel`（逻辑通道传输框架（socket 传输 + 分帧编解码 + 客户端/服务端），
   核心类型用 `Galosys.Foundation.Channel`，Options 类型用 `Microsoft.Extensions.Options`；多服务器组合用
-  `ChannelServerGroup`，宿主注册用 `AddChannelServer(definition)` + `AddChannelServerGroup()`；
+  `ChannelServerGroup`，构造入口用 `ChannelServerBuilder` / `ChannelClientBuilder`（连接池经 `AsPool()` 进入）；
+  库不提供 IoC/Hosting 集成；
   消息层用 `Galosys/Foundation/Channel/Framing/` 的 `IMessageFramer`、`Galosys/Foundation/Channel/Codecs/` 的
   `IMessageCodec<T>` 和 `Galosys/Foundation/Channel/Session/` 的
   `IChannelSession<T>`（`AsLineTextSession`/`AsJsonSession` 组合入口，批量写用 `WriteBatchAsync`）；
