@@ -19,12 +19,12 @@ namespace Galosys.Foundation.Channel
         private int _total;
         private int _disposed;
 
-        /// <summary>创建连接池。</summary>
+        /// <summary>创建连接池；公开入口是 <see cref="ChannelClientPoolBuilder"/>。</summary>
         /// <param name="options">池配置；构造时会校验并克隆。</param>
         /// <param name="factory">客户端工厂；null 时使用 <see cref="ChannelClientFactory"/>。</param>
         /// <exception cref="ArgumentNullException"><paramref name="options"/> 为 null。</exception>
         /// <exception cref="ArgumentException">配置无效。</exception>
-        public ChannelClientPool(
+        internal ChannelClientPool(
             ChannelClientPoolOptions options,
             IChannelClientFactory? factory = null)
         {

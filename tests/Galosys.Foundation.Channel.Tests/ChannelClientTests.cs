@@ -15,11 +15,13 @@ public sealed class ChannelClientTests
     public async Task ConnectAsync_EchoesBytesAndPublishesStates()
     {
         await using var server = await TestServer.StartAsync(TestHandlers.EchoAsync);
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         var states = new List<(ChannelConnectionState Old, ChannelConnectionState New)>();
         client.StateChanged += (_, args) => states.Add((args.OldState, args.NewState));
@@ -51,11 +53,13 @@ public sealed class ChannelClientTests
             await TestHandlers.EchoAsync(context);
         });
 
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         var first = client.ConnectAsync(CancellationToken.None);
         var second = client.ConnectAsync(CancellationToken.None);
@@ -80,12 +84,14 @@ public sealed class ChannelClientTests
         var endpoint = (IPEndPoint)probe.LocalEndpoint;
         probe.Stop();
 
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = endpoint,
-            // 本机对 loopback 关闭端口的拒绝可能延迟约 2 秒，超时必须留出余量。
-            ConnectTimeout = TimeSpan.FromSeconds(10),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = endpoint,
+                // 本机对 loopback 关闭端口的拒绝可能延迟约 2 秒，超时必须留出余量。
+                ConnectTimeout = TimeSpan.FromSeconds(10),
+            })
+            .Build();
 
         ChannelConnectionFailure? failure = null;
         client.StateChanged += (_, args) =>
@@ -106,15 +112,17 @@ public sealed class ChannelClientTests
     [Fact]
     public async Task ConnectAsync_WithTls_ThrowsNotSupportedWithoutSocket()
     {
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = new IPEndPoint(IPAddress.Loopback, 1),
-            ConnectTimeout = TimeSpan.FromSeconds(1),
-            Tls = new ChannelTlsOptions
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
             {
-                ClientOptions = new SslClientAuthenticationOptions { TargetHost = "localhost" },
-            },
-        });
+                EndPoint = new IPEndPoint(IPAddress.Loopback, 1),
+                ConnectTimeout = TimeSpan.FromSeconds(1),
+                Tls = new ChannelTlsOptions
+                {
+                    ClientOptions = new SslClientAuthenticationOptions { TargetHost = "localhost" },
+                },
+            })
+            .Build();
 
         await Assert.ThrowsAsync<NotSupportedException>(
             () => client.ConnectAsync(CancellationToken.None));
@@ -148,11 +156,13 @@ public sealed class ChannelClientTests
             received.TrySetResult(buffer);
         });
 
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         await client.ConnectAsync(CancellationToken.None);
         await client.Connection!.Writer.WriteAsync("bye"u8.ToArray());
@@ -170,11 +180,13 @@ public sealed class ChannelClientTests
     public async Task DisposeAsync_IsIdempotent_AndInvalidatesOldConnection()
     {
         await using var server = await TestServer.StartAsync(TestHandlers.EchoAsync);
-        var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         await client.ConnectAsync(CancellationToken.None);
         var oldConnection = client.Connection!;
@@ -199,11 +211,13 @@ public sealed class ChannelClientTests
             context.Abort(new IOException("server-drop"));
         });
 
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         try
         {
@@ -235,11 +249,13 @@ public sealed class ChannelClientTests
             return Task.CompletedTask;
         });
 
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         await client.ConnectAsync(CancellationToken.None);
         await TestClient.WaitUntilAsync(
@@ -253,11 +269,13 @@ public sealed class ChannelClientTests
     public async Task CloseAsync_IsIdempotent_AndDoesNotRaiseClosedTwice()
     {
         await using var server = await TestServer.StartAsync(TestHandlers.EchoAsync);
-        await using var client = new ChannelClient(new ChannelClientOptions
-        {
-            EndPoint = server.EndPoint,
-            ConnectTimeout = TimeSpan.FromSeconds(2),
-        });
+        await using var client = ChannelClientBuilder
+            .Create(new ChannelClientOptions
+            {
+                EndPoint = server.EndPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .Build();
 
         await client.ConnectAsync(CancellationToken.None);
 

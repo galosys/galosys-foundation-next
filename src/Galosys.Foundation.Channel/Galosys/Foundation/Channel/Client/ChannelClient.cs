@@ -31,11 +31,11 @@ namespace Galosys.Foundation.Channel
         private Task? _shutdownTask;
         private int _disposed;
 
-        /// <summary>创建客户端并校验配置。</summary>
+        /// <summary>创建客户端；公开入口是 <see cref="ChannelClientBuilder"/>。</summary>
         /// <param name="options">客户端配置；构造时会克隆。</param>
         /// <exception cref="ArgumentNullException"><paramref name="options"/> 为 null。</exception>
         /// <exception cref="ArgumentException">配置无效。</exception>
-        public ChannelClient(ChannelClientOptions options)
+        internal ChannelClient(ChannelClientOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
             _options = options.Clone();

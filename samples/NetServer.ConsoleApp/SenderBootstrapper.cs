@@ -1,6 +1,7 @@
 using Galosys.Foundation.Channel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net;
 
 namespace NetServer.ConsoleApp
 {
@@ -21,27 +22,28 @@ namespace NetServer.ConsoleApp
         private readonly ILogger<SenderBootstrapper> _logger;
 
         public SenderBootstrapper(
-            IChannelClientFactory factory,
             ILoggerFactory loggerFactory,
             ILogger<SenderBootstrapper> logger)
         {
             _loggerFactory = loggerFactory;
             _logger = logger;
 
-            _client = factory.Create(new ChannelClientOptions
-            {
-                EndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, Port),
-                ConnectTimeout = TimeSpan.FromSeconds(5),
-                Reconnect = new ChannelReconnectPolicy
+            _client = ChannelClientBuilder
+                .Create(o =>
                 {
-                    // 0 表示无限重试；这里给一个有限值，避免服务端长时间不可用时示例永不退出。
-                    MaxAttempts = 5,
-                    InitialDelay = TimeSpan.FromSeconds(1),
-                    MaxDelay = TimeSpan.FromSeconds(30),
-                    BackoffMultiplier = 2.0,
-                    JitterFactor = 0.2,
-                },
-            });
+                    o.EndPoint = new IPEndPoint(IPAddress.Loopback, Port);
+                    o.ConnectTimeout = TimeSpan.FromSeconds(5);
+                    o.Reconnect = new ChannelReconnectPolicy
+                    {
+                        // 0 表示无限重试；这里给一个有限值，避免服务端长时间不可用时示例永不退出。
+                        MaxAttempts = 5,
+                        InitialDelay = TimeSpan.FromSeconds(1),
+                        MaxDelay = TimeSpan.FromSeconds(30),
+                        BackoffMultiplier = 2.0,
+                        JitterFactor = 0.2,
+                    };
+                })
+                .Build();
 
             _client.StateChanged += OnStateChanged;
         }

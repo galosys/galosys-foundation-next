@@ -2,7 +2,6 @@ using Galosys.Foundation.Channel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NetServer.ConsoleApp;
 using System.Net;
 
@@ -31,39 +30,33 @@ if (role is "both" or "client")
 {
     if (usePool)
     {
-        builder.Services.AddSingleton(new ChannelClientPool(new ChannelClientPoolOptions
-        {
-            ClientOptions = new ChannelClientOptions
+        builder.Services.AddSingleton(ChannelClientBuilder
+            .Create(o =>
             {
-                EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
-                ConnectTimeout = TimeSpan.FromSeconds(5),
-            },
-            MaxSize = 4,
-            RentTimeout = TimeSpan.FromSeconds(30),
-        }));
+                o.EndPoint = new IPEndPoint(IPAddress.Loopback, 8000);
+                o.ConnectTimeout = TimeSpan.FromSeconds(5);
+            })
+            .AsPool()
+            .WithMaxSize(4)
+            .WithRentTimeout(TimeSpan.FromSeconds(30))
+            .Build());
     }
-    else
-    {
-        // 客户端由 SenderBootstrapper 自己创建，以便订阅 StateChanged 观察重连过程。
-        builder.Services.AddSingleton<IChannelClientFactory, ChannelClientFactory>();
-    }
+    // else 分支不需要注册：客户端由 SenderBootstrapper 自己创建，
+    // 以便订阅 StateChanged 观察重连过程。
 }
 
 if (role is "both" or "server")
 {
     builder.Services.AddSingleton(sp =>
     {
-        var options = new ChannelServerOptions
-        {
-            EndPoint = new IPEndPoint(IPAddress.Any, 8000),
-        };
         var handler = sp.GetRequiredService<SampleChannelHandler>();
 
-        return new ChannelServer(
-            options,
-            pipeline => pipeline.Run(handler.HandleAsync),
-            sp.GetRequiredService<ILoggerFactory>(),
-            sp.GetRequiredService<IServiceScopeFactory>());
+        return ChannelServerBuilder
+            .Create(o => o.EndPoint = new IPEndPoint(IPAddress.Any, 8000))
+            .Run(handler.HandleAsync)
+            .WithLoggerFactory(sp.GetRequiredService<ILoggerFactory>())
+            .WithServiceScopeFactory(sp.GetRequiredService<IServiceScopeFactory>())
+            .Build();
     });
 
     // ChannelServerRunner 必须先于发送端注册，保证监听就绪后客户端才连接。
