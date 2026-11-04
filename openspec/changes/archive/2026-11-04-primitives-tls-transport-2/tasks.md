@@ -13,7 +13,7 @@
 
 ## 1. 扩展方法与首个 TLS 回显
 
-- [ ] 1.1 写 `UseTls` 失败测试
+- [x] 1.1 写 `UseTls` 失败测试 — 已实现并测试通过。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
@@ -75,7 +75,7 @@ public sealed class TlsServerIntegrationTests
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~TlsServerIntegrationTests"`
 Expected: 编译失败，提示 `UseTls` 不存在（这是本任务的“红”）。
 
-- [ ] 1.2 新增 `TlsPipelineExtensions`
+- [x] 1.2 新增 `TlsPipelineExtensions` — 已实现并测试通过。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Pipeline/TlsPipelineExtensions.cs`
@@ -126,7 +126,7 @@ namespace Galosys.Foundation.Channel
 }
 ```
 
-- [ ] 1.3 构建并跑首个 TLS 回显测试
+- [x] 1.3 构建并跑首个 TLS 回显测试 — 构建 0 错误，回显测试通过。
 
 Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
@@ -136,7 +136,7 @@ Expected: 测试通过。
 
 ## 2. 集成行为测试
 
-- [ ] 2.1 增加 TLS 测试客户端辅助类
+- [x] 2.1 增加 TLS 测试客户端辅助类 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsTestCertificates.cs`
@@ -198,7 +198,7 @@ internal sealed class TlsServerTestClient : IAsyncDisposable
 
 补 using：`System.Net.Security`、`System.Net.Sockets`、`System.Text` 中实际使用的项。
 
-- [ ] 2.2 增加证书拒绝与服务器恢复测试
+- [x] 2.2 增加证书拒绝与服务器恢复测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
@@ -275,7 +275,7 @@ private static ChannelServer CreateServer(
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CertificateRejected"`
 Expected: 测试通过；handler 未执行，后续合法客户端仍可回显。
 
-- [ ] 2.3 增加管线顺序测试
+- [x] 2.3 增加管线顺序测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
@@ -357,7 +357,7 @@ public async Task TlsHandshake_RunsBeforeInnerMiddlewareAndHandler()
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~TlsHandshake_RunsBeforeInnerMiddlewareAndHandler"`
 Expected: 测试通过；握手完成前 inner 中间件和 handler 都不执行。
 
-- [ ] 2.4 增加明文请求不泄漏测试
+- [x] 2.4 增加明文请求不泄漏测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
@@ -402,7 +402,7 @@ public async Task ClearTextRequest_DoesNotReachHandler()
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~ClearTextRequest_DoesNotReachHandler"`
 Expected: 测试通过；明文请求没有回显，handler 未执行。
 
-- [ ] 2.5 增加 TLS 活跃时优雅停机测试
+- [x] 2.5 增加 TLS 活跃时优雅停机测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
@@ -455,7 +455,7 @@ public async Task StopAsync_WaitsForTlsConnection_AndClientReadsEof()
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~StopAsync_WaitsForTlsConnection"`
 Expected: 测试通过；`StopAsync` 等待 handler 完成，客户端读到 EOF。
 
-- [ ] 2.6 增加 handler 异常释放与 ALPN 透传测试
+- [x] 2.6 增加 handler 异常释放与 ALPN 透传测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsServerIntegrationTests.cs`
@@ -525,7 +525,7 @@ Expected: 两个测试通过；handler 异常后服务器仍可接受新 TLS 连
 
 ## 3. 文档与验证
 
-- [ ] 3.1 更新 Channel README 的 `UseTls` 章节
+- [x] 3.1 更新 Channel README 的 `UseTls` 章节 — 已在归档阶段完成。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Channel/README.md`
@@ -562,7 +562,7 @@ var server = new ChannelServer(options, pipeline =>
 - `NetServer.ConsoleApp` 保持明文示例，不在此 change 启用 TLS。
 ```
 
-- [ ] 3.2 跑 Channel 构建与全量测试
+- [x] 3.2 跑 Channel 构建与全量测试 — 构建 0 错误，全量测试 264 通过 / 0 失败。
 
 Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
@@ -570,7 +570,7 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 现有测试与新增 `TlsServerIntegrationTests` 全部通过。
 
-- [ ] 3.3 校验 OpenSpec artifact
+- [x] 3.3 校验 OpenSpec artifact — `Change 'primitives-tls-transport-2' is valid`（仅 spec 正文字数告警，与仓库既有 spec 一致）。
 
 Run: `openspec validate "primitives-tls-transport-2" --strict --no-interactive`
 Expected: `Change 'primitives-tls-transport-2' is valid`。

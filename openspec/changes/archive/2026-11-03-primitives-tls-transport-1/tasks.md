@@ -197,7 +197,7 @@ Expected: 全部 `ChannelTlsOptionsTests` 通过。
 
 ## 2. 双向管道与 `SslStream` 适配
 
-- [ ] 2.1 实现 `SslStreamDuplexPipe`
+- [x] 2.1 实现 `SslStreamDuplexPipe` — 已实现并测试通过。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/SslStreamDuplexPipe.cs`
@@ -270,7 +270,7 @@ namespace Galosys.Foundation.Channel
 }
 ```
 
-- [ ] 2.2 实现 `TlsDuplexPipe` 握手与读泵
+- [x] 2.2 实现 `TlsDuplexPipe` 握手与读泵 — 已实现并测试通过。
 
 **Files:**
 - Create: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/TlsDuplexPipe.cs`
@@ -388,7 +388,7 @@ namespace Galosys.Foundation.Channel
 }
 ```
 
-- [ ] 2.3 实现写泵、`close_notify` 与释放
+- [x] 2.3 实现写泵、`close_notify` 与释放 — 已实现并测试通过。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Channel/Galosys/Foundation/Channel/Transports/TlsDuplexPipe.cs`
@@ -467,7 +467,7 @@ public async ValueTask DisposeAsync()
 }
 ```
 
-- [ ] 2.4 构建并跑配置/适配器测试
+- [x] 2.4 构建并跑配置/适配器测试 — 构建 0 错误，配置与适配器测试全部通过。
 
 Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
@@ -477,7 +477,7 @@ Expected: 全部通过。
 
 ## 3. 握手与关闭测试
 
-- [ ] 3.1 增加服务端/客户端握手回显测试
+- [x] 3.1 增加服务端/客户端握手回显测试 — 已实现并测试通过。
 
 **Files:**
 - Create: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
@@ -614,7 +614,7 @@ internal sealed class TlsTestPair : IAsyncDisposable
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~TlsDuplexPipeTests"`
 Expected: `CreateAsync_ServerAndClient_HandshakeAndEcho` 通过。
 
-- [ ] 3.2 增加证书拒绝测试
+- [x] 3.2 增加证书拒绝测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
@@ -645,7 +645,7 @@ public async Task CreateAsync_ClientRejectsCertificate_ThrowsAuthenticationExcep
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CreateAsync_ClientRejectsCertificate"`
 Expected: 测试通过；异常类型为 `AuthenticationException`。
 
-- [ ] 3.3 增加明文连接拒绝测试
+- [x] 3.3 增加明文连接拒绝测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
@@ -682,7 +682,7 @@ public async Task CreateAsync_ServerRejectsClearTextBytes()
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CreateAsync_ServerRejectsClearTextBytes"`
 Expected: 测试通过；服务端不会返回可用 `TlsDuplexPipe`。
 
-- [ ] 3.4 增加握手超时与外部取消测试
+- [x] 3.4 增加握手超时与外部取消测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
@@ -739,7 +739,7 @@ public async Task CreateAsync_ExternalCancellation_ThrowsOperationCanceledExcept
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj --filter "FullyQualifiedName~CreateAsync_HandshakeTimeout|FullyQualifiedName~CreateAsync_ExternalCancellation"`
 Expected: 两个测试通过。
 
-- [ ] 3.5 增加优雅关闭、刷新与半关闭测试
+- [x] 3.5 增加优雅关闭、刷新与半关闭测试 — 已实现并测试通过。
 
 **Files:**
 - Modify: `tests/Galosys.Foundation.Channel.Tests/TlsDuplexPipeTests.cs`
@@ -797,7 +797,7 @@ Expected: 两个测试通过；1 MiB 数据顺序一致，客户端半关闭后�
 
 ## 4. 文档与验证
 
-- [ ] 4.1 更新 Channel README 的 TLS 章节
+- [x] 4.1 更新 Channel README 的 TLS 章节 — 已在归档阶段完成。
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Channel/README.md`
@@ -828,7 +828,7 @@ internal `TlsDuplexPipe.CreateAsync(inner, tls, isServer, ct)` 在现有 `IDuple
 本阶段不提供 `UseTls`，也不做同端口 ALPN。管线接入见 `primitives-tls-transport-2`。
 ```
 
-- [ ] 4.2 跑 Channel 构建与全量测试
+- [x] 4.2 跑 Channel 构建与全量测试 — 构建 0 错误，全量测试 255 通过 / 0 失败。
 
 Run: `dotnet build src/Galosys.Foundation.Channel/Galosys.Foundation.Channel.csproj`
 Expected: 0 errors。
@@ -836,7 +836,7 @@ Expected: 0 errors。
 Run: `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`
 Expected: 现有测试与新增 `ChannelTlsOptionsTests` / `TlsDuplexPipeTests` 全部通过。
 
-- [ ] 4.3 校验 OpenSpec artifact
+- [x] 4.3 校验 OpenSpec artifact — `Change 'primitives-tls-transport-1' is valid`（仅 spec 正文字数告警，与仓库既有 spec 一致）。
 
 Run: `openspec validate "primitives-tls-transport-1" --strict --no-interactive`
 Expected: `Change 'primitives-tls-transport-1' is valid`。

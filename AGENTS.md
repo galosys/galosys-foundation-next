@@ -38,6 +38,8 @@
   `IMessageCodec<T>` 和 `Galosys/Foundation/Channel/Session/` 的
   `IChannelSession<T>`（`AsLineTextSession`/`AsJsonSession` 组合入口，批量写用 `WriteBatchAsync`）；
   客户端用 `Galosys/Foundation/Channel/Client/` 的 `ChannelClient`（重连退避）与 `ChannelClientPool`（有界连接池））、
+  TLS 用 `Galosys/Foundation/Channel/Pipeline/TlsPipelineExtensions.cs` 的 `UseTls`（服务端握手中间件，
+  握手先于后续中间件、失败不进入业务代码；TLS 适配器在 `Galosys/Foundation/Channel/Transports/`）、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
   `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）、
   `Galosys.Foundation.DurableTask.Core`（Durable Task 编排/活动封装，核心类型用
