@@ -16,6 +16,8 @@
 - 优雅停机：停止 accept → 等待在途连接 → `ShutdownTimeout` 后强制 abort。
 - 传输层处理部分发送、输入/输出 Pipe 背压、TCP keep-alive、半关闭与连接重置。
 - 正常关闭会先排空已提交输出，并短暂读空内核接收缓冲区后再关闭，避免带未读入站数据触发 RST。
+- TLS 传输适配器：`ChannelTlsOptions` 配置校验，`SslStream` 与 `IDuplexPipe` 的适配器，握手失败/超时与关闭语义。
+- 服务端 TLS：`pipeline.UseTls(tls)` 在管线中完成握手并替换传输，握手先于后续中间件，失败不进入业务代码。
 
 ## 连接关闭语义
 
@@ -139,6 +141,65 @@ public async Task HandleAsync(ChannelContext context)
 - `WriteAsync` 用信号量串行化；写取消可能已写出半个帧，会中止连接。
 - `MessageChannelOptions.MaxMessageSize` 默认 1 MiB。
 - `AsJsonSession<T>()` = 长度前缀 + JSON；`AsLineTextSession()` = 换行 + UTF-8。
+
+## TLS 传输适配器（P3-1）
+
+`ChannelTlsOptions`（`Microsoft.Extensions.Options`）复用 BCL 的
+`SslServerAuthenticationOptions` / `SslClientAuthenticationOptions`，并提供 10 秒默认握手超时：
+
+```csharp
+var tls = new ChannelTlsOptions
+{
+    ServerOptions = new SslServerAuthenticationOptions
+    {
+        ServerCertificate = certificate,
+    },
+    HandshakeTimeout = TimeSpan.FromSeconds(10),
+};
+```
+
+internal `TlsDuplexPipe.CreateAsync(inner, tls, isServer, ct)` 在现有 `IDuplexPipe` 上完成握手，
+返回解密后的双向管道。适配器不拥有底层传输；关闭时先排空输出、发送 TLS `close_notify`，
+再由 `ChannelServer` / `ChannelClient` 释放底层连接。
+
+- 校验先于握手：缺少服务端证书、`TargetHost` 为空或握手超时非法时直接抛 `ArgumentException`，不会进入 TLS 协商。
+- 握手失败（证书被拒、明文连接）、握手超时与外部取消都以异常结束，不回退明文；失败时不暴露可用传输。
+- 底层输入 EOF 只结束解密后的输入，写方向仍然可用，因此处理器仍能写回响应。
+- 适配器不调用底层 `Input.Complete`，底层连接的收尾仍由框架负责。
+
+本阶段不提供 `UseTls`，也不做同端口 ALPN。管线接入见 `primitives-tls-transport-2`。
+
+## 服务端 TLS（P3-2）
+
+```csharp
+var tls = new ChannelTlsOptions
+{
+    ServerOptions = new SslServerAuthenticationOptions
+    {
+        ServerCertificate = certificate,
+    },
+};
+
+var server = new ChannelServer(options, pipeline =>
+{
+    pipeline.UseTls(tls);
+    pipeline.Use(telemetry);
+    pipeline.Run(handler);
+});
+```
+
+`UseTls` 在 `next` 之前完成服务端握手，并用 `context.UseTransport` 替换为解密后的管道；
+握手失败不会调用后续中间件或 handler。中间件在管线结束后释放 TLS 包装层，底层连接仍由
+`ChannelServer` 释放。
+
+- TLS 中间件应尽量靠前；在它之前只放不读业务字节的观察型中间件。
+- 同一管线只调用一次 `UseTls`；重复调用会导致二次握手失败。
+- `UseTls` 只校验服务端一侧；`ClientOptions` 不完整不会阻塞服务端启动（客户端 TLS 另见后续阶段）。
+- `ApplicationProtocols` 只透传给 `SslStream`，本阶段不做同端口 ALPN 协议分发。
+- `NetServer.ConsoleApp` 保持明文示例，不在此 change 启用 TLS。
+
+> 平台说明：Windows Schannel 默认协商 TLS 1.2。客户端拒绝服务端证书时，服务端握手会先于
+> 客户端的拒绝告警返回成功，因此拒绝在业务读取时才暴露；TLS 端口始终不回退明文。
 
 ## 最小用法
 
@@ -403,4 +464,4 @@ dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Te
 
 ## 阶段
 
-P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b：`ChannelServerGroup` 与多服务器 IoC 注册。P4-1（本阶段）：单连接 `ChannelClient`。P4-2（本阶段）：重连与指数退避。P4-3（本阶段）：连接池与批量写入。TLS、NamedPipe/Diagnostics 在后续阶段。
+P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b：`ChannelServerGroup` 与多服务器 IoC 注册。P4-1（本阶段）：单连接 `ChannelClient`。P4-2（本阶段）：重连与指数退避。P4-3（本阶段）：连接池与批量写入。P3-1（本阶段）：TLS 传输适配器。P3-2（本阶段）：服务端 TLS `UseTls`。客户端 TLS、NamedPipe/Diagnostics 在后续阶段。
