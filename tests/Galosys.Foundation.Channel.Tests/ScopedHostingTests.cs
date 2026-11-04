@@ -1,9 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Galosys.Foundation.Channel;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Galosys.Foundation.Channel.Tests;
@@ -34,32 +32,26 @@ public sealed class ScopedHostingTests
     {
         ScopedProbe.Reset();
 
-        var builder = Host.CreateApplicationBuilder();
-        builder.Services.AddScoped<ScopedProbe>();
-        builder.Services.AddSingleton(sp =>
-        {
-            var options = new ChannelServerOptions
+        var services = new ServiceCollection();
+        services.AddScoped<ScopedProbe>();
+
+        await using var provider = services.BuildServiceProvider();
+        await using var server = ChannelServerBuilder
+            .Create(o =>
             {
-                EndPoint = new IPEndPoint(IPAddress.Loopback, 0),
-                ShutdownTimeout = TimeSpan.FromSeconds(1),
-            };
+                o.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
+                o.ShutdownTimeout = TimeSpan.FromSeconds(1);
+            })
+            .Run(context =>
+            {
+                _ = context.Services.GetRequiredService<ScopedProbe>();
+                return Task.CompletedTask;
+            })
+            .WithServiceScopeFactory(provider.GetRequiredService<IServiceScopeFactory>())
+            .Build();
 
-            return new ChannelServer(
-                options,
-                pipeline => pipeline.Run(context =>
-                {
-                    _ = context.Services.GetRequiredService<ScopedProbe>();
-                    return Task.CompletedTask;
-                }),
-                sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetRequiredService<IServiceScopeFactory>());
-        });
-        builder.Services.AddHostedService<TestChannelServerRunner>();
+        await server.StartAsync(CancellationToken.None);
 
-        using var host = builder.Build();
-        await host.StartAsync();
-
-        var server = host.Services.GetRequiredService<ChannelServer>();
         var endPoint = (IPEndPoint)server.LocalEndPoint!;
 
         for (var i = 0; i < 2; i++)
@@ -74,7 +66,7 @@ public sealed class ScopedHostingTests
         Assert.Equal(2, ScopedProbe.Instances.Distinct().Count());
         Assert.Equal(2, ScopedProbe.DisposedCount);
 
-        await host.StopAsync();
+        await server.StopAsync(CancellationToken.None);
     }
 
     private static async Task WaitForAsync(Func<bool> condition)

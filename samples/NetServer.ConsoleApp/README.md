@@ -54,12 +54,15 @@ info: NetServer.ConsoleApp.ChannelSender[0]
 
 `Program.cs` 里的 `usePool` 变量切换：
 
-| `usePool` | 使用的类型 | 演示内容 |
-|---|---|---|
-| `false`（默认） | `ChannelClient` | 基础收发 + 重连与指数退避 |
-| `true` | `ChannelClientPool` | 租借 / 归还、连接复用 |
+| `usePool` | 使用的类型 | 构建方式 | 演示内容 |
+|---|---|---|---|
+| `false`（默认） | `ChannelClient` | `ChannelClientBuilder.Create(...).Build()` | 基础收发 + 重连与指数退避 |
+| `true` | `ChannelClientPool` | `ChannelClientBuilder.Create(...).AsPool()....Build()` | 租借 / 归还、连接复用 |
 
 连接池模式下客户端**不配置** `Reconnect`：池自己做健康检查与断线替换，客户端自带重连会与之竞争。
+
+服务端由 `ChannelServerBuilder.Create(...).Run(...).Build()` 构建；库不提供 IoC 集成，
+示例用 `ChannelServerRunner`（`IHostedService`）把启停映射到宿主。
 
 ## 观察重连
 
@@ -120,11 +123,11 @@ $client.Close()
 
 | 文件 | 作用 |
 |---|---|
-| `Program.cs` | 解析运行角色（`server`/`client`/`both`）与发送模式，注册服务端与发送端 |
+| `Program.cs` | 解析运行角色（`server`/`client`/`both`）与发送模式，用构建器注册服务端与发送端 |
 | `SampleChannelHandler.cs` | 服务端处理器：用 `AsLineTextSession()` 读取并回包 |
-| `ChannelServerRunner.cs` | 把 `ChannelServer` 启停映射到宿主 |
+| `ChannelServerRunner.cs` | 把由 `ChannelServerBuilder` 构建的 `ChannelServer` 启停映射到宿主 |
 | `ChannelSender.cs` | 单个连接上的收发辅助：建会话、发消息、读响应 |
-| `SenderBootstrapper.cs` | 单连接客户端：`ChannelClient` + 重连退避 + 批量写 |
+| `SenderBootstrapper.cs` | 单连接客户端：`ChannelClientBuilder` 构建 + 重连退避 + 批量写 |
 | `PoolSenderBootstrapper.cs` | 连接池客户端：`RentAsync`/`ReturnAsync` 租借归还 |
 
 ## 关键约束

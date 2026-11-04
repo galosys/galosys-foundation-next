@@ -1,23 +1,68 @@
 # Galosys.Foundation.Channel
 
-逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端。核心类型位于 `Galosys.Foundation.Channel`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup` 与多服务器宿主注册；P4-1 增加单连接 `ChannelClient`；P4-2 增加重连与指数退避；P4-3 增加连接池与批量写入。
+逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端。核心类型位于 `Galosys.Foundation.Channel`；`*Options` 位于 `Microsoft.Extensions.Options`。P1.5a 使用组合式 `ChannelServer`；P1.5b 增加 `ChannelServerGroup`；P4-1 增加单连接 `ChannelClient`；P4-2 增加重连与指数退避；P4-3 增加连接池与批量写入。
 
 > 本库的 Channel 指网络通道（逻辑通道 + 消息边界），与 `System.Threading.Channels.Channel<T>` 的进程内生产者-消费者队列无关。
+
+## 架构分层
+
+本库按「上层不感知底层」组织，共四层。每一层只依赖它下面一层的契约，因此换传输、换分帧、换编解码都不会波及上层。
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 组合层  ChannelServer / ChannelClient / ChannelClientPool │  生命周期、组合、连接池
+│          ChannelServerGroup                               │
+├──────────────────────────────────────────────────────────┤
+│ 消息层  IChannelPipeline / IChannelSession<T>             │  中间件、消息边界、编解码
+│          IMessageFramer / IMessageCodec<T>                │
+├──────────────────────────────────────────────────────────┤
+│ 传输契约 IChannelListener / IChannelConnection（internal）│  绑定、accept、字节管道
+├──────────────────────┬───────────────────────────────────┤
+│ 传输实现              │ 传输实现                          │
+│ SocketChannel*（TCP） │ （NamedPipe 等，待建）            │
+└──────────────────────┴───────────────────────────────────┘
+```
+
+### 各层职责边界
+
+| 层 | 负责 | 不负责 |
+|---|---|---|
+| 组合层 | 启停、优雅停机、失败回滚、多服务器编排、连接池租借归还 | 字节怎么传 |
+| 消息层 | 分帧边界、payload 编解码、消息会话、协议分发、TLS 握手 | socket 细节 |
+| 传输契约 | 绑定端点、接受连接、提供 `IDuplexPipe`、半关闭与 abort 信号 | 消息边界 |
+| 传输实现 | 把具体 IO 资源（socket / 管道流）接到 `PipeReader` / `PipeWriter` | 消息语义 |
+
+### 关键抽象
+
+- **传输契约**：`IChannelListener` / `IChannelConnection` 是 internal，输出只有一个 `IDuplexPipe`。任何新传输只要能产出字节管道，就能复用上层的每连接 scope、`MaxConnections`、优雅停机、分帧编解码与 TLS —— 不需要改上层代码。
+- **当前传输实现**：只有 `SocketChannelListener` / `SocketChannelConnection`（TCP）。
+- **换传输的前置条件**：目前 `ChannelServerCore` 直接调用 `SocketChannelListener.BindAsync`，没有按配置选择实现的工厂缝；新增第二种传输前需要先补该缝。
+- **消息边界**：分帧（`IMessageFramer`）只回答「消息到哪结束」，编解码（`IMessageCodec<T>`）只处理一帧 payload，两者互不知晓。
+
+### 构造入口
+
+server、client、连接池的**唯一公开构造入口是构建器**，构造函数均非公开：
+
+- `ChannelServerBuilder` → `ChannelServer`
+- `ChannelClientBuilder` → `IChannelClient`；经 `AsPool()` 切换到 `ChannelClientPoolBuilder` → `ChannelClientPool`
+
+本库**不提供** IoC 集成：没有 `IServiceCollection` 扩展、没有 `IHostedService` 适配器、不引用 `Microsoft.Extensions.Hosting.Abstractions`。需要挂到宿主时由调用方自行包装 runner（见「接入宿主」）。
 
 ## 能力
 
 - 自包含 socket transport：基于 `System.Net.Sockets` + `System.IO.Pipelines`，核心程序集不依赖 `Microsoft.AspNetCore.*` 或 Kestrel。
 - `ChannelContext`：连接视图（`ConnectionId`、端点、`Transport`、`ConnectionClosed`、`Services`）；公开属性无 setter，`Items` 为连接内可变字典。
-- `ChannelServer`：sealed 组合入口，通过构造函数接收 `ChannelServerOptions`、pipeline 配置回调和可选的 `ILoggerFactory` / `IServiceScopeFactory`。
+- `ChannelServerBuilder`：server 的唯一公开构建入口；配置快照、中间件注册顺序与终端处理器唯一性在构建器内保证。
+- `ChannelClientBuilder` / `ChannelClientPoolBuilder`：client 与连接池的唯一公开构建入口；连接池经 `AsPool()` 作为 client 构建的一个选项进入。
+- `ChannelServer`：sealed 组合入口，实现 `IChannelServer`。
 - `ChannelServerGroup`：按构造顺序启动、失败时逆序回滚、并行停机并聚合异常、释放幂等。
-- `ChannelServerDefinition` + `AddChannelServer` / `AddChannelServerGroup()`：把多个独立配置的 server 注册到宿主。
-- 每连接独立 `IServiceScope`（构造 `ChannelServer` 时传入 `IServiceScopeFactory` 后生效），连接关闭令牌先于作用域释放。
-- `Action<IChannelPipeline>`：中间件只包装 `Transport`，业务数据由终端处理器消费。
+- 每连接独立 `IServiceScope`（构建时传入 `IServiceScopeFactory` 后生效），连接关闭令牌先于作用域释放。
+- `IChannelPipeline`：中间件只包装 `Transport`，业务数据由终端处理器消费。
 - 优雅停机：停止 accept → 等待在途连接 → `ShutdownTimeout` 后强制 abort。
 - 传输层处理部分发送、输入/输出 Pipe 背压、TCP keep-alive、半关闭与连接重置。
 - 正常关闭会先排空已提交输出，并短暂读空内核接收缓冲区后再关闭，避免带未读入站数据触发 RST。
 - TLS 传输适配器：`ChannelTlsOptions` 配置校验，`SslStream` 与 `IDuplexPipe` 的适配器，握手失败/超时与关闭语义。
-- 服务端 TLS：`pipeline.UseTls(tls)` 在管线中完成握手并替换传输，握手先于后续中间件，失败不进入业务代码。
+- 服务端 TLS：`ChannelServerBuilder.UseTls(tls)` 在管线中完成握手并替换传输，握手先于后续中间件，失败不进入业务代码。
 
 ## 连接关闭语义
 
@@ -180,12 +225,12 @@ var tls = new ChannelTlsOptions
     },
 };
 
-var server = new ChannelServer(options, pipeline =>
-{
-    pipeline.UseTls(tls);
-    pipeline.Use(telemetry);
-    pipeline.Run(handler);
-});
+var server = ChannelServerBuilder
+    .Create(options => options.EndPoint = new IPEndPoint(IPAddress.Any, 8000))
+    .UseTls(tls)
+    .Use(telemetry)
+    .Run(handler)
+    .Build();
 ```
 
 `UseTls` 在 `next` 之前完成服务端握手，并用 `context.UseTransport` 替换为解密后的管道；
@@ -204,27 +249,34 @@ var server = new ChannelServer(options, pipeline =>
 ## 最小用法
 
 ```csharp
-var server = new ChannelServer(
-    new ChannelServerOptions
+var server = ChannelServerBuilder
+    .Create(options =>
     {
-        EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
-    },
-    pipeline => pipeline.Run(HandleAsync),
-    loggerFactory);
+        options.EndPoint = new IPEndPoint(IPAddress.Loopback, 8000);
+    })
+    .Run(HandleAsync)
+    .Build();
 
 await server.RunAsync(cancellationToken);
 ```
 
-`StartAsync` 只负责绑定、监听并启动接受循环，返回即可连接；`RunAsync` 是“启动并阻塞到停机”的兼容入口。`pipeline` 回调在启动时执行一次，必须调用 `Run`。
+`StartAsync` 只负责绑定、监听并启动接受循环，返回即可连接；`RunAsync` 是“启动并阻塞到停机”的兼容入口。构建器在 `Build()` 时把中间件与终端处理器物化成管线，每次启动尝试都会重新物化。
+
+- `Create` 立即校验配置，非法配置在构建期就抛 `ArgumentException`，不会进入监听状态。
+- `Run` 只能调用一次，重复调用抛 `InvalidOperationException`；未调用 `Run` 就 `Build()` 也抛 `InvalidOperationException`。
+- `Use` 的注册顺序即中间件由外向内的执行顺序。
+- `UseTls` 在**注册时**校验服务端 TLS 配置（缺少服务端证书等立即抛错），握手在管线最前完成。
 
 ## 单连接客户端（P4-1）
 
 ```csharp
-await using var client = new ChannelClient(new ChannelClientOptions
-{
-    EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
-    ConnectTimeout = TimeSpan.FromSeconds(5),
-});
+await using var client = ChannelClientBuilder
+    .Create(options =>
+    {
+        options.EndPoint = new IPEndPoint(IPAddress.Loopback, 8000);
+        options.ConnectTimeout = TimeSpan.FromSeconds(5);
+    })
+    .Build();
 
 await client.ConnectAsync(cancellationToken);
 
@@ -240,19 +292,23 @@ var read = await client.Connection.Reader.ReadAsync();
 ## 重连与退避（P4-2）
 
 ```csharp
-var options = new ChannelClientOptions
-{
-    EndPoint = endPoint,
-    Reconnect = new ChannelReconnectPolicy
+var client = ChannelClientBuilder
+    .Create(options =>
     {
-        MaxAttempts = 0,                 // 0 = 无限
-        InitialDelay = TimeSpan.FromSeconds(1),
-        MaxDelay = TimeSpan.FromSeconds(30),
-        BackoffMultiplier = 2.0,
-        JitterFactor = 0.2,
-    },
-};
+        options.EndPoint = endPoint;
+        options.Reconnect = new ChannelReconnectPolicy
+        {
+            MaxAttempts = 0,                 // 0 = 无限
+            InitialDelay = TimeSpan.FromSeconds(1),
+            MaxDelay = TimeSpan.FromSeconds(30),
+            BackoffMultiplier = 2.0,
+            JitterFactor = 0.2,
+        };
+    })
+    .Build();
 ```
+
+也可以用 `.WithReconnect(policy)` 单独设置重连策略（等价于在 `Create` 回调里赋值）。
 
 - 首次连接失败与已连接断线共用同一套退避。
 - 重连成功产生新的 `ChannelContext` 与新 `ConnectionId`；断开期间不缓冲、不重放消息。
@@ -263,16 +319,16 @@ var options = new ChannelClientOptions
 ## 连接池（P4-3）
 
 ```csharp
-await using var pool = new ChannelClientPool(new ChannelClientPoolOptions
-{
-    ClientOptions = new ChannelClientOptions
+await using var pool = ChannelClientBuilder
+    .Create(options =>
     {
-        EndPoint = new IPEndPoint(IPAddress.Loopback, 8000),
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-    },
-    MaxSize = 8,
-    RentTimeout = TimeSpan.FromSeconds(30),
-});
+        options.EndPoint = new IPEndPoint(IPAddress.Loopback, 8000);
+        options.ConnectTimeout = TimeSpan.FromSeconds(5);
+    })
+    .AsPool()
+    .WithMaxSize(8)
+    .WithRentTimeout(TimeSpan.FromSeconds(30))
+    .Build();
 
 var client = await pool.RentAsync(cancellationToken);
 try
@@ -284,6 +340,8 @@ finally
     await pool.ReturnAsync(client);
 }
 ```
+
+`AsPool()` 把构建目标从单连接切换为连接池，客户端配置被继承到池配置。`WithMaxSize` 与 `WithRentTimeout` 在调用时校验参数（非正数或超过 1 天抛 `ArgumentOutOfRangeException`）。
 
 - `MaxSize` 是已创建 + 正在创建 + 已租出的硬上限；池满时不再新建连接。
 - 池满时 `RentAsync` 最多等待 `RentTimeout`，超时抛 `TimeoutException`；调用方取消抛 `OperationCanceledException`。
@@ -307,13 +365,15 @@ await session.WriteBatchAsync(new[] { "alpha", "beta", "gamma" });
 ## 多服务器组合
 
 ```csharp
-var http = new ChannelServer(
-    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
-    pipeline => pipeline.Run(HttpHandler));
+var http = ChannelServerBuilder
+    .Create(o => o.EndPoint = new IPEndPoint(IPAddress.Any, 8080))
+    .Run(HttpHandler)
+    .Build();
 
-var mqtt = new ChannelServer(
-    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 1883) },
-    pipeline => pipeline.Run(MqttHandler));
+var mqtt = ChannelServerBuilder
+    .Create(o => o.EndPoint = new IPEndPoint(IPAddress.Any, 1883))
+    .Run(MqttHandler)
+    .Build();
 
 await using var group = new ChannelServerGroup(http, mqtt);
 await group.StartAsync(cancellationToken);
@@ -325,34 +385,11 @@ await group.StopAsync(cancellationToken);
 
 组按构造顺序串行启动；某个 server 启动失败时，已启动的 server 会按相反顺序停止，并重新抛出原始异常。
 停机并行执行，所有失败汇总为 `AggregateException`；`DisposeAsync` 可重复调用。
+`ChannelServerGroup` 是纯运行时组合类型，不依赖容器；组的启停由调用方直接驱动。
 
-## 多服务器宿主注册
+## 接入宿主
 
-```csharp
-var builder = Host.CreateApplicationBuilder(args);
-
-builder.Services.AddChannelServer(new ChannelServerDefinition(
-    "http",
-    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
-    pipeline => pipeline.Run(HttpHandler)));
-
-builder.Services.AddChannelServer(new ChannelServerDefinition(
-    "mqtt",
-    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 1883) },
-    pipeline => pipeline.Run(MqttHandler)));
-
-builder.Services.AddChannelServerGroup();
-
-var host = builder.Build();
-host.Run();
-```
-
-注册顺序就是启动顺序；`ChannelServerGroupHostedService` 在宿主启动时按该顺序启动组，停机时并行停止。
-重复调用 `AddChannelServerGroup()` 是幂等的；只注册定义而不调用它时，定义不会监听。
-每个定义保留自己的 `ChannelServerOptions`，不存在全局 `ChannelServerOptions` 注册。
-每连接作用域来自容器的 `IServiceScopeFactory`；宿主 `ShutdownTimeout` 应大于最大的 server `ShutdownTimeout`。
-
-## 宿主接入
+本库不提供 IoC 集成，也没有 `IHostedService` 适配器。需要挂到宿主时由调用方自行包装 runner：
 
 ```csharp
 var builder = Host.CreateApplicationBuilder(args);
@@ -360,18 +397,18 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddSingleton<SampleHandler>();
 builder.Services.AddSingleton(sp =>
 {
-    var options = new ChannelServerOptions
-    {
-        EndPoint = new IPEndPoint(IPAddress.Any, 8000),
-        ShutdownTimeout = TimeSpan.FromSeconds(10),
-    };
     var handler = sp.GetRequiredService<SampleHandler>();
 
-    return new ChannelServer(
-        options,
-        pipeline => pipeline.Run(handler.HandleAsync),
-        sp.GetRequiredService<ILoggerFactory>(),
-        sp.GetRequiredService<IServiceScopeFactory>());
+    return ChannelServerBuilder
+        .Create(o =>
+        {
+            o.EndPoint = new IPEndPoint(IPAddress.Any, 8000);
+            o.ShutdownTimeout = TimeSpan.FromSeconds(10);
+        })
+        .Run(handler.HandleAsync)
+        .WithLoggerFactory(sp.GetRequiredService<ILoggerFactory>())
+        .WithServiceScopeFactory(sp.GetRequiredService<IServiceScopeFactory>())
+        .Build();
 });
 builder.Services.AddHostedService<ChannelServerRunner>();
 
@@ -394,20 +431,20 @@ internal sealed class ChannelServerRunner : IHostedService
 }
 ```
 
-- 不提供泛型 `AddChannelServer<T>`；多服务器宿主托管使用 `AddChannelServer(definition)` + `AddChannelServerGroup()`，options 仍由调用方为每个定义单独创建。
 - runner 必须先于会立即连接服务器的 hosted service 注册，保证绑定先完成。
 - 每连接从传入的 `IServiceScopeFactory` 创建独立作用域，可在处理器中通过 `context.Services` 解析 Scoped 服务。
 - 宿主 `HostOptions.ShutdownTimeout` 应大于 `ChannelServerOptions.ShutdownTimeout`，否则宿主会先截断停机等待。
-- 未配置 `EndPoint` 或配置非法时，`StartAsync()` 抛出 `ArgumentException`，不会进入监听状态。
+- 停机时 runner 必须传 `CancellationToken.None`，否则宿主的停机截止时间会截断服务器自身的排空预算。
 
 ## 协议分发
 
 ```csharp
 var dispatcher = new ProtocolDispatcher(selector);
 
-var server = new ChannelServer(
-    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
-    pipeline => pipeline.Run(dispatcher.HandleAsync));
+var server = ChannelServerBuilder
+    .Create(o => o.EndPoint = new IPEndPoint(IPAddress.Any, 8080))
+    .Run(dispatcher.HandleAsync)
+    .Build();
 ```
 
 `ProtocolDispatcher.HandleAsync` 与 `ChannelHandlerDelegate` 签名一致，可以直接作为终端处理器。
@@ -424,9 +461,10 @@ var selector = new PrefixProtocolSelector(new[]
     new PrefixProtocolRule(new byte[] { 0x10 }, mqttProtocol),
 });
 
-var server = new ChannelServer(
-    new ChannelServerOptions { EndPoint = new IPEndPoint(IPAddress.Any, 8080) },
-    pipeline => pipeline.Run(new ProtocolDispatcher(selector).HandleAsync));
+var server = ChannelServerBuilder
+    .Create(o => o.EndPoint = new IPEndPoint(IPAddress.Any, 8080))
+    .Run(new ProtocolDispatcher(selector).HandleAsync)
+    .Build();
 ```
 
 规则按注册顺序 first-match；重叠前缀时先注册者优先，需要更长前缀优先时把它放在前面。
@@ -440,7 +478,7 @@ var server = new ChannelServer(
 
 - `MaxReadBufferSize` / `MaxWriteBufferSize` 是输入/输出 Pipe 的暂停阈值，默认分别为 1 MiB / 64 KiB，必须大于 0。
 - `CreateBoundListenSocket` 由调用方负责创建、绑定和套接字选项；框架随后调用 `Listen`，失败时负责释放返回的 socket。
-- 非法配置在绑定前抛出 `ArgumentException`。
+- 非法配置在**构建期**抛出 `ArgumentException`（`ChannelServerBuilder.Create` 立即校验），不会进入绑定阶段。
 
 ## 约束
 
@@ -452,6 +490,7 @@ var server = new ChannelServer(
 - 一个连接只有一个 Reader 消费者、一个 Writer 生产者。
 - `ConnectionClosed` 令牌的取消发生在 scope 释放之前；通过 `Register` 注册的回调由 `CancellationTokenSource` 调度，不保证全部在 scope 释放前执行完毕。
 - 核心库不得引入 `Microsoft.AspNetCore.App` FrameworkReference 或任何 `Microsoft.AspNetCore.*` 程序集。
+- server / client / 连接池的构造函数均非公开，构建器是唯一公开构造入口。
 
 ## 构建与测试
 
@@ -464,4 +503,8 @@ dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Te
 
 ## 阶段
 
-P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b：`ChannelServerGroup` 与多服务器 IoC 注册。P4-1（本阶段）：单连接 `ChannelClient`。P4-2（本阶段）：重连与指数退避。P4-3（本阶段）：连接池与批量写入。P3-1（本阶段）：TLS 传输适配器。P3-2（本阶段）：服务端 TLS `UseTls`。客户端 TLS、NamedPipe/Diagnostics 在后续阶段。
+P1.5a：组合式服务器入口，删除继承与泛型 DI 入口。P1.5b：`ChannelServerGroup` 与多服务器组合。P4-1（本阶段）：单连接 `ChannelClient`。P4-2（本阶段）：重连与指数退避。P4-3（本阶段）：连接池与批量写入。P3-1（本阶段）：TLS 传输适配器。P3-2（本阶段）：服务端 TLS `UseTls`。
+
+本阶段：移除 IoC/Hosting 集成（`AddChannelServer` / `AddChannelServerGroup()` / `ChannelServerGroupHostedService` / `ChannelServerDefinition`），改用 `ChannelServerBuilder` / `ChannelClientBuilder` / `ChannelClientPoolBuilder` 作为唯一公开构造入口。
+
+客户端 TLS、NamedPipe/Diagnostics 在后续阶段。

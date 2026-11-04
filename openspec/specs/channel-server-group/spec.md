@@ -1,7 +1,7 @@
 # channel-server-group Specification
 
 ## Purpose
-定义 `ChannelServerGroup` 的多服务器组合语义：顺序启动、失败逆序回滚、并行停机并聚合异常、幂等释放，以及 `ChannelServerGroupHostedService` 到宿主生命周期的映射。
+定义 `ChannelServerGroup` 的多服务器组合语义：顺序启动、失败逆序回滚、并行停机并聚合异常与幂等释放。组是纯运行时组合类型，其启停语义由调用方直接驱动。
 
 ## Requirements
 
@@ -104,26 +104,3 @@
 - **WHEN** 组中一个 server 的释放抛出异常
 - **THEN** 组仍然释放剩余 server
 - **AND** 最终抛出包含该失败的 `AggregateException`
-
-### Requirement: 宿主集成
-
-`ChannelServerGroupHostedService` MUST be a public sealed type in `Microsoft.Extensions.Hosting` and MUST host a `ChannelServerGroup` by forwarding `IHostedService.StartAsync` with the host token, `StopAsync` as `ChannelServerGroup.StopAsync(CancellationToken.None)`, and `IAsyncDisposable.DisposeAsync` to the group. It MUST NOT change the group's ordering, rollback, aggregation, or idempotence semantics; start failures propagate unchanged, and stop failures surface as an `AggregateException`.
-
-#### Scenario: 宿主启停映射到组
-
-- **WHEN** 宿主启动和停止一个由 `ChannelServerGroupHostedService` 托管的组
-- **THEN** 组内所有 server 按组语义启动和停止
-- **AND** 宿主启动返回时所有 server 已绑定
-- **AND** 宿主停止返回时所有 server 已停止
-
-#### Scenario: 组启动失败传播到宿主
-
-- **WHEN** 组中某个 server 启动失败，宿主调用 `StartAsync`
-- **THEN** hosted service 向宿主传播组的原始异常
-- **AND** 组已完成回滚，不会留下已启动的 server
-
-#### Scenario: 宿主释放幂等
-
-- **WHEN** 宿主容器释放 hosted service，随后再次释放组
-- **THEN** 不会重复释放 server
-- **AND** 不抛出 `ObjectDisposedException`

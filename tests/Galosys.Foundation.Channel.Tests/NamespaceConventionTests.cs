@@ -54,12 +54,31 @@ public sealed class NamespaceConventionTests
     }
 
     [Fact]
-    public void HostedServiceAndDiExtensions_UseMicrosoftExtensionsNamespaces()
+    public void HostedServiceAndDiExtensions_AreRemoved()
     {
         var assembly = typeof(ChannelServer).Assembly;
 
-        Assert.NotNull(assembly.GetType("Microsoft.Extensions.Hosting.ChannelServerGroupHostedService"));
-        Assert.NotNull(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerGroupServiceCollectionExtensions"));
+        Assert.Null(assembly.GetType("Microsoft.Extensions.Hosting.ChannelServerGroupHostedService"));
+        Assert.Null(assembly.GetType("Microsoft.Extensions.DependencyInjection.ChannelServerGroupServiceCollectionExtensions"));
+        Assert.Null(assembly.GetType("Galosys.Foundation.Channel.ChannelServerDefinition"));
+        Assert.DoesNotContain(assembly.GetTypes(), t => t.Namespace == "Microsoft.Extensions.Hosting");
+        Assert.DoesNotContain(assembly.GetTypes(), t => t.Namespace == "Microsoft.Extensions.DependencyInjection");
+    }
+
+    [Fact]
+    public void Constructors_AreNotPublic()
+    {
+        foreach (var type in new[]
+        {
+            typeof(ChannelServer),
+            typeof(ChannelClient),
+            typeof(ChannelClientPool),
+        })
+        {
+            Assert.Empty(type.GetConstructors(
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Instance));
+        }
     }
 
     [Fact]

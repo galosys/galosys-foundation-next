@@ -93,16 +93,16 @@ public sealed class ChannelClientPoolTests
     public async Task RentAsync_CreationFailureReleasesSlot()
     {
         var endpoint = GetClosedLoopbackEndPoint();
-        await using var pool = new ChannelClientPool(new ChannelClientPoolOptions
-        {
-            ClientOptions = new ChannelClientOptions
+        await using var pool = ChannelClientBuilder
+            .Create(new ChannelClientOptions
             {
                 EndPoint = endpoint,
                 ConnectTimeout = TimeSpan.FromSeconds(1),
-            },
-            MaxSize = 1,
-            RentTimeout = TimeSpan.FromSeconds(2),
-        });
+            })
+            .AsPool()
+            .WithMaxSize(1)
+            .WithRentTimeout(TimeSpan.FromSeconds(2))
+            .Build();
 
         var error = await Record.ExceptionAsync(
             () => pool.RentAsync(CancellationToken.None).AsTask());
@@ -311,12 +311,17 @@ public sealed class ChannelClientPoolTests
     [Fact]
     public async Task Constructor_RejectsInvalidOptions()
     {
-        var options = new ChannelClientPoolOptions
-        {
-            ClientOptions = null!,
-        };
+        // 池配置不再直接构造，改由构建器校验：连接数上限必须大于 0。
+        Assert.Throws<ArgumentOutOfRangeException>(() => ChannelClientBuilder
+            .Create(new ChannelClientOptions { EndPoint = new IPEndPoint(IPAddress.Loopback, 0) })
+            .AsPool()
+            .WithMaxSize(0));
 
-        Assert.Throws<ArgumentException>(() => new ChannelClientPool(options));
+        // 租借等待超时必须大于 0。
+        Assert.Throws<ArgumentOutOfRangeException>(() => ChannelClientBuilder
+            .Create(new ChannelClientOptions { EndPoint = new IPEndPoint(IPAddress.Loopback, 0) })
+            .AsPool()
+            .WithRentTimeout(TimeSpan.Zero));
     }
 
     [Fact]
@@ -337,18 +342,22 @@ public sealed class ChannelClientPoolTests
         int maxSize,
         TimeSpan? rentTimeout = null,
         IChannelClientFactory? factory = null)
-        => new(
-            new ChannelClientPoolOptions
+    {
+        var builder = ChannelClientBuilder
+            .Create(new ChannelClientOptions
             {
-                ClientOptions = new ChannelClientOptions
-                {
-                    EndPoint = endPoint,
-                    ConnectTimeout = TimeSpan.FromSeconds(2),
-                },
-                MaxSize = maxSize,
-                RentTimeout = rentTimeout ?? TimeSpan.FromSeconds(2),
-            },
-            factory);
+                EndPoint = endPoint,
+                ConnectTimeout = TimeSpan.FromSeconds(2),
+            })
+            .AsPool()
+            .WithMaxSize(maxSize)
+            .WithRentTimeout(rentTimeout ?? TimeSpan.FromSeconds(2));
+
+        if (factory is not null)
+            builder = builder.WithFactory(factory);
+
+        return builder.Build();
+    }
 
     private static IPEndPoint GetClosedLoopbackEndPoint()
     {

@@ -13,12 +13,12 @@ namespace Galosys.Foundation.Channel
     {
         private readonly ChannelServerCore _core;
 
-        /// <summary>创建组合式服务器。</summary>
+        /// <summary>创建组合式服务器；公开入口是 <see cref="ChannelServerBuilder"/>。</summary>
         /// <remarks>
         /// <paramref name="configurePipeline"/> 在每次启动尝试时执行一次，必须调用
         /// <see cref="IChannelPipeline.Run"/>；否则启动失败且不会绑定监听器。
         /// </remarks>
-        public ChannelServer(
+        internal ChannelServer(
             ChannelServerOptions options,
             Action<IChannelPipeline> configurePipeline,
             ILoggerFactory? loggerFactory = null,
