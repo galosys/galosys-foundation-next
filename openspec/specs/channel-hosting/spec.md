@@ -1,53 +1,64 @@
 # channel-hosting Specification
 
 ## Purpose
-定义 `ChannelServer` 与通用宿主的集成方式：由调用方 runner 或 `ChannelServerGroupHostedService` 映射启停、从 `IServiceScopeFactory` 创建每连接作用域、通过 `ChannelServerDefinition` 注册多服务器，并保持示例行为等价。
+定义 `ChannelServer` 与通用宿主的集成方式：由调用方提供的 runner 映射启停、从 `IServiceScopeFactory` 创建每连接作用域，并保持示例行为等价。库本身不提供 IoC 与宿主集成，多服务器组合由 `ChannelServerGroup` 承担。
 
 ## Requirements
 
 ### Requirement: 宿主生命周期
 
-`ChannelServer` MUST be hostable by a caller-provided `IHostedService` runner or by `ChannelServerGroupHostedService` when `AddChannelServerGroup()` is used. Start MUST return only after binding; a bind failure MUST make `IHost.StartAsync` throw without leaving servers listening. Stop MUST wait for in-flight connections per each server's `ShutdownTimeout`, and the group hosted service MUST pass `CancellationToken.None`. Container disposal MUST dispose the group and its servers idempotently.
+The implementation SHALL satisfy this requirement. `ChannelServer` MUST be hostable by a caller-provided `IHostedService` runner. Start MUST return only after binding; a bind failure MUST make the caller's host start throw without leaving servers listening. Stop MUST wait for in-flight connections per each server's `ShutdownTimeout`. Container disposal MUST dispose the server idempotently when the caller registers it for disposal.
 
 #### Scenario: 宿主启动后即可连接
 
-- **WHEN** 调用 `IHost.StartAsync`，runner 或 `ChannelServerGroupHostedService` 完成绑定并返回
-- **THEN** 每个已启动 server 的 `LocalEndPoint` 非 null
+- **WHEN** 调用方把由构建器产出的服务器注册为 `IHostedService` 并调用 `IHost.StartAsync`
+- **THEN** hosted service 完成绑定并返回
+- **AND** 服务器的 `LocalEndPoint` 非 null
 - **AND** 客户端可以立即连接
 
 #### Scenario: 端口占用导致宿主启动失败
 
-- **WHEN** 配置的端口已被占用，调用 `IHost.StartAsync`
+- **WHEN** 配置的端口已被占用，宿主调用 `IHost.StartAsync`
 - **THEN** `StartAsync` 抛出 `SocketException`
 - **AND** 宿主不会报告启动成功
-- **AND** 同组中已经启动的 server 被停止
+- **AND** 服务器不会留下监听 socket
 
 #### Scenario: 宿主停机等待在途连接
 
-- **WHEN** 存在未完成的连接且 `ShutdownTimeout` 未到期，调用 `IHost.StopAsync`
-- **THEN** 所有 server 停止接受新连接
+- **WHEN** 存在未完成的连接且 `ShutdownTimeout` 未到期，宿主调用 `IHost.StopAsync`
+- **THEN** 服务器停止接受新连接
 - **AND** 等待在途连接完成后再返回
 
 #### Scenario: 宿主停机超时中止
 
-- **WHEN** 在途连接超过 `ShutdownTimeout` 仍未完成，调用 `IHost.StopAsync`
+- **WHEN** 在途连接超过 `ShutdownTimeout` 仍未完成，宿主调用 `IHost.StopAsync`
 - **THEN** 服务器中止剩余连接并返回
 - **AND** 宿主停机流程正常完成，不抛出未处理异常
 
 #### Scenario: 容器释放组和服务器
 
-- **WHEN** 宿主已启动组，随后释放宿主容器
-- **THEN** 组停止并释放所有 server
+- **WHEN** 宿主已启动服务器，随后释放宿主容器
+- **THEN** 服务器停止并释放所有资源
 - **AND** 不抛出 `ObjectDisposedException`
 - **AND** 重复释放保持幂等
 
+### Requirement: 调用方 runner 的停机令牌
+
+The caller-provided runner MUST pass `CancellationToken.None` to the server's stop call so the host's shutdown deadline cannot truncate the server's own drain budget.
+
+#### Scenario: 宿主停机不截断服务器排空预算
+
+- **WHEN** 宿主在自身停机期限内调用 `IHost.StopAsync`
+- **THEN** runner 向服务器传递 `CancellationToken.None`
+- **AND** 服务器按自身 `ShutdownTimeout` 完成在途连接排空
+
 ### Requirement: 每连接作用域来自容器
 
-The implementation SHALL satisfy this requirement. 当 `ChannelServer` 构造时传入 `IServiceScopeFactory` 时，每个连接必须创建独立作用域。`ChannelContext.Services` 必须能解析注册为 Scoped 的服务；不同连接必须获得不同的 Scoped 实例；连接关闭后作用域必须被释放。
+The implementation SHALL satisfy this requirement. 当构建器通过 `WithServiceScopeFactory` 传入 `IServiceScopeFactory` 时，每个连接必须创建独立作用域。`ChannelContext.Services` 必须能解析注册为 Scoped 的服务；不同连接必须获得不同的 Scoped 实例；连接关闭后作用域必须被释放。未传入作用域工厂的构建结果必须使用共享空作用域提供程序。
 
 #### Scenario: 两个连接获得不同 Scoped 实例
 
-- **WHEN** 注册 `AddScoped<ScopedProbe>()`，把容器的 `IServiceScopeFactory` 传给 `ChannelServer`，并接受两个连接
+- **WHEN** 调用方把容器的 `IServiceScopeFactory` 通过构建器传给服务器，并接受两个连接
 - **THEN** 两个连接得到不同的实例
 - **AND** 每个实例只属于其连接
 
@@ -59,13 +70,13 @@ The implementation SHALL satisfy this requirement. 当 `ChannelServer` 构造时
 
 #### Scenario: 手动构造的服务器不受影响
 
-- **WHEN** 手动构造 `ChannelServer` 且未传入 `IServiceScopeFactory`
+- **WHEN** 构建服务器时未传入 `IServiceScopeFactory`
 - **THEN** `ChannelContext.Services` 返回空提供程序
 - **AND** 连接处理仍然正常
 
 ### Requirement: 示例迁移行为等价
 
-The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须使用 `ChannelServer` + `ChannelServerRunner` 托管服务器，保持监听 `0.0.0.0:8000`、打印收到的文本、周期性地发送请求并在 Ctrl+C 时优雅停机。
+The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须使用构建器产出 `ChannelServer` 并通过 `ChannelServerRunner` 托管服务器，保持监听 `0.0.0.0:8000`、打印收到的文本、周期性地发送请求并在 Ctrl+C 时优雅停机。
 
 #### Scenario: 启动后周期性打印收到的文本
 
@@ -85,47 +96,19 @@ The implementation SHALL satisfy this requirement. `NetServer.ConsoleApp` 必须
 - **THEN** 进程在 `ShutdownTimeout` 内退出
 - **AND** 不出现 `NotImplementedException` 或未观察的异常
 
-### Requirement: 多服务器注册
+### Requirement: 库不提供 IoC 与宿主集成
 
-`ChannelServerDefinition` MUST be public sealed in `Galosys.Foundation.Channel` with a non-empty `Name`, snapshotted options, pipeline delegate, rejecting blank names, null options or delegates; `AddChannelServer` MUST append a singleton, no global options; `AddChannelServerGroup` MUST idempotently register group and hosted service from definitions with container's `ILoggerFactory`/`IServiceScopeFactory`; `ChannelServerGroupHostedService` MUST be public sealed in `Microsoft.Extensions.Hosting`.
+The implementation SHALL NOT ship any `IServiceCollection` extension method, hosted service adapter, or server definition type for host registration. The library MUST NOT reference `Microsoft.Extensions.Hosting.Abstractions`. The assembly MUST NOT expose types under the `Microsoft.Extensions.DependencyInjection` or `Microsoft.Extensions.Hosting` namespaces. Configuration MUST be expressed through the builder types in `Galosys.Foundation.Channel`.
 
-#### Scenario: 两个定义绑定独立端点
+#### Scenario: 程序集不暴露宿主集成类型
 
-- **WHEN** 注册两个 `ChannelServerDefinition`，分别使用不同的 loopback 端点和不同的 `ShutdownTimeout`，然后调用 `AddChannelServerGroup()` 并启动宿主
-- **THEN** 组内包含两个 server
-- **AND** 两个 server 的 `LocalEndPoint` 都非 null 且端口不同
-- **AND** 两个 server 分别遵守自己的 `ShutdownTimeout`
+- **WHEN** 通过反射检查 `Galosys.Foundation.Channel` 程序集中的类型
+- **THEN** 不存在 `Microsoft.Extensions.DependencyInjection.ChannelServerGroupServiceCollectionExtensions`
+- **AND** 不存在 `Microsoft.Extensions.Hosting.ChannelServerGroupHostedService`
+- **AND** 不存在 `Galosys.Foundation.Channel.ChannelServerDefinition`
 
-#### Scenario: 注册顺序决定启动顺序
+#### Scenario: 核心程序集不引用宿主抽象包
 
-- **WHEN** 按 A、B 的顺序调用 `AddChannelServer`，再调用 `AddChannelServerGroup()` 并启动宿主
-- **THEN** `ChannelServerGroup.Servers[0]` 对应 A，`Servers[1]` 对应 B
-- **AND** 启动事件顺序为 A 后 B
-
-#### Scenario: 缺少组注册时定义不启动
-
-- **WHEN** 只调用 `AddChannelServer(definition)` 而没有调用 `AddChannelServerGroup()`，宿主启动完成
-- **THEN** 容器中不存在 `ChannelServerGroup`
-- **AND** 定义中的端点没有监听
-- **AND** 宿主停机和释放正常完成
-
-#### Scenario: 重复组注册幂等
-
-- **WHEN** 连续调用两次 `AddChannelServerGroup()`
-- **THEN** 容器中只有一个 `ChannelServerGroup` 注册
-- **AND** 只有一个 `ChannelServerGroupHostedService` 注册
-- **AND** 宿主启动后每个定义只绑定一次
-
-#### Scenario: 启动失败后不留下已启动服务器
-
-- **WHEN** 第一个定义绑定成功，第二个定义绑定到已占用端口，宿主调用 `StartAsync`
-- **THEN** 宿主启动抛出原始绑定异常
-- **AND** 第一个 server 已被停止，`LocalEndPoint` 回到 null
-- **AND** 第二个 server 保持未启动
-
-#### Scenario: scope 工厂传播到每个定义
-
-- **WHEN** 注册一个 Scoped 服务、两个定义和 `AddChannelServerGroup()`，分别连接两个 server 的处理器解析该服务
-- **THEN** 两个连接获得不同的 Scoped 实例
-- **AND** 每个实例只属于其连接
-- **AND** 连接关闭后对应 scope 被释放
+- **WHEN** 检查 `Galosys.Foundation.Channel` 的 csproj 与还原资产
+- **THEN** 不存在 `microsoft.extensions.hosting.abstractions` 条目
+- **AND** 仍然引用 `microsoft.extensions.dependencyinjection.abstractions` 以支持每连接作用域
