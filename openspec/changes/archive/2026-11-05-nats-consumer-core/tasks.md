@@ -16,7 +16,7 @@
 
 ## 1. 公共表面：特性与选项类型
 
-- [ ] 1.1 把 `NatsConsumerAttribute` 移到 `NATS.Net/` 目录并补 XML 文档（命名空间保持 `NATS.Net`）
+- [x] 1.1 把 `NatsConsumerAttribute` 移到 `NATS.Net/` 目录并补 XML 文档（命名空间保持 `NATS.Net`）
 
 **Files:**
 - Create: `src/Galosys.Foundation.Nats.Net/NATS.Net/NatsConsumerAttribute.cs`
@@ -81,7 +81,7 @@ Expected: 0 errors；输出中不再出现 `NatsConsumerAttribute.cs` 的 CS1591
 Run: `Select-String -Path src/Galosys.Foundation.Nats.Net/NATS.Net/NatsConsumerAttribute.cs -Pattern "namespace NATS.Net"`
 Expected: 有匹配（命名空间保持 `NATS.Net`，与上游 `NatsClient` 共享，对齐 AMQP 约定）。
 
-- [ ] 1.2 实现 `NatsOptions` 与 `NatsHandlerProperty`
+- [x] 1.2 实现 `NatsOptions` 与 `NatsHandlerProperty`
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Nats.Net/Microsoft/Extensions/Options/NatsOptions.cs`
@@ -158,7 +158,7 @@ Expected: 无匹配（必须是 `public`，外部宿主才能绑定配置节）�
 
 ## 2. 扫描、订阅、反序列化与派发
 
-- [ ] 2.1 实现消费者注册扫描与订阅描述
+- [x] 2.1 实现消费者注册扫描与订阅描述
 
 **Files:**
 - Modify: `src/Galosys.Foundation.Nats.Net/Microsoft/Extensions/DependencyInjection/ServiceProviderExtensions.cs`
@@ -348,7 +348,7 @@ Expected: 0 errors；不再出现 CS8604（`DependencyContext` 可空）与 CS01
 Run: `Select-String -Path src/Galosys.Foundation.Nats.Net/Microsoft/Extensions/DependencyInjection/ServiceProviderExtensions.cs -Pattern "sample.greet"`
 Expected: 无匹配（硬编码 subject 已移除）。
 
-- [ ] 2.2 实现消费循环、负载反序列化与 handler 派发
+- [x] 2.2 实现消费循环、负载反序列化与 handler 派发
 
 **Files:**
 - Create: `src/Galosys.Foundation.Nats.Net/Galosys/Foundation/Nats/Net/NatsConsumerDispatcher.cs`
@@ -522,7 +522,7 @@ Expected: 0 errors。
 
 ## 3. 宿主生命周期与 DI 接线
 
-- [ ] 3.1 实现 `NatsBootstrapper`
+- [x] 3.1 实现 `NatsBootstrapper`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Nats.Net/Microsoft/Extensions/Hosting/NatsBootstrapper.cs`
@@ -702,7 +702,7 @@ Expected: 0 errors。
 Run: `Select-String -Path src/Galosys.Foundation.Nats.Net -Pattern "NatsSample.ConsoleApp"`
 Expected: 无匹配（旧原型文件的错误命名空间 `NatsSample.ConsoleApp.Infrastructure` 已删除）。
 
-- [ ] 3.2 实现 `AddNats` 注册扩展
+- [x] 3.2 实现 `AddNats` 注册扩展
 
 **Files:**
 - Create: `src/Galosys.Foundation.Nats.Net/Microsoft/Extensions/DependencyInjection/NatsServiceCollectionExtensions.cs`
@@ -769,7 +769,7 @@ namespace Microsoft.Extensions.DependencyInjection
 Run: `dotnet build src/Galosys.Foundation.Nats.Net/Galosys.Foundation.Nats.Net.csproj`
 Expected: 0 errors。
 
-- [ ] 3.3 实现 `InternalModule` 供模块化宿主自动接线
+- [x] 3.3 实现 `InternalModule` 供模块化宿主自动接线
 
 **Files:**
 - Create: `src/Galosys.Foundation.Nats.Net/Galosys/Foundation/Nats/Net/InternalModule.cs`
@@ -806,7 +806,7 @@ Expected: 有匹配（`IModule` 位于该命名空间，不在 `Galosys.Foundati
 
 ## 4. 示例接线
 
-- [ ] 4.1 把 NATS 连接参数迁到 `appsettings.json` 的 `Nats` 节
+- [x] 4.1 把 NATS 连接参数迁到 `appsettings.json` 的 `Nats` 节
 
 **Files:**
 - Modify: `samples/NatsSample.ConsoleApp/appsettings.json`
@@ -876,7 +876,7 @@ host.Run();
 Run: `dotnet build samples/NatsSample.ConsoleApp/NatsSample.ConsoleApp.csproj`
 Expected: 0 errors。
 
-- [ ] 4.2 启用消费者特性并实现处理器
+- [x] 4.2 启用消费者特性并实现处理器
 
 **Files:**
 - Modify: `samples/NatsSample.ConsoleApp/Adapter/Handlers/SampleGreatHandler.cs`
@@ -924,7 +924,7 @@ Expected: 0 errors；无 CS0246（`NATS.Net` 命名空间可解析）。
 
 **说明：** 处理器只需 `using NATS.Net;` 即可拿到 `NatsConsumerAttribute`（与上游 `NatsClient` 同一命名空间）。
 
-- [ ] 4.3 移除示例中重复的手写订阅器并改造生产者
+- [x] 4.3 移除示例中重复的手写订阅器并改造生产者
 
 **Files:**
 - Delete: `samples/NatsSample.ConsoleApp/NatsBootstrapper.cs`
@@ -982,7 +982,7 @@ Expected: 0 errors；CS9113（`logger` 未使用）警告消失。
 
 ## 5. 文档
 
-- [ ] 5.1 编写 `src/Galosys.Foundation.Nats.Net/README.md`
+- [x] 5.1 编写 `src/Galosys.Foundation.Nats.Net/README.md`
 
 **Files:**
 - Create: `src/Galosys.Foundation.Nats.Net/README.md`
@@ -1081,7 +1081,7 @@ exchange/queue/DLX 概念，`NatsConsumerAttribute` 只有 `Subject` 与 `QueueG
 Run: `Select-String -Path src/Galosys.Foundation.Nats.Net/README.md -Pattern "## 能力范围"`
 Expected: 有匹配。
 
-- [ ] 5.2 修正根 `README.md` 与 `AGENTS.md` 的"不可编译"表述
+- [x] 5.2 修正根 `README.md` 与 `AGENTS.md` 的"不可编译"表述
 
 **Files:**
 - Modify: `README.md`
@@ -1173,7 +1173,7 @@ Expected: 无匹配。
 
 ## 6. 验证
 
-- [ ] 6.1 构建库与示例
+- [x] 6.1 构建库与示例
 
 **Files:**
 - 无（仅验证）
@@ -1190,7 +1190,7 @@ Expected: 有匹配（命名空间保持 `NATS.Net`）。
 Run: `Test-Path src/Galosys.Foundation.Nats.Net/NatsConsumerAttribute.cs`
 Expected: `False`（旧位置的文件已删除）。
 
-- [ ] 6.2 端到端验证
+- [x] 6.2 端到端验证
 
 **Files:**
 - 无（仅验证）
@@ -1208,7 +1208,7 @@ Expected:
 **反例验证**：把 `SampleGreatHandler.HandleAsync` 临时改为 `throw new InvalidOperationException("boom")`，
 重新运行。Expected: 日志出现 `NATS 消费者处理失败: subject=sample.greet`，且订阅保持存活（进程不退出、后续消息仍被消费）。
 
-- [ ] 6.3 校验 OpenSpec
+- [x] 6.3 校验 OpenSpec
 
 **Files:**
 - 无（仅验证）

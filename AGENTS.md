@@ -8,8 +8,6 @@
 - **仅 Windows**，需要 .NET SDK `10.0.401`（`global.json` 固定）。
 - **只构建改动的单个项目**：示例项目用 `dotnet build samples/<Project>/<Project>.csproj`。
   foundation 类库用 `dotnet build src/<Project>/<Project>.csproj`。
-  `dotnet build Galosys.Foundation.Next.slnx` 会失败：`Galosys.Foundation.Nats.Net` 是无法编译的原型，
-  而 `NatsSample.ConsoleApp` 引用了它。
 - 测试项目只有 `tests/Galosys.Foundation.Channel.Tests`（xUnit）：
   `dotnet test tests/Galosys.Foundation.Channel.Tests/Galosys.Foundation.Channel.Tests.csproj`。
 - 运行：`dotnet run --project samples/<Project>/<Project>.csproj`。多数示例是长期运行的 `BackgroundService`，
@@ -42,7 +40,11 @@
   TLS 用 `Galosys/Foundation/Channel/Pipeline/TlsPipelineExtensions.cs` 的 `UseTls`（服务端握手中间件，
   握手先于后续中间件、失败不进入业务代码；TLS 适配器在 `Galosys/Foundation/Channel/Transports/`）、
   `Galosys.Foundation.Doris`（Doris `_stream_load` 客户端）、
-  `Galosys.Foundation.Nats.Net`（不可编译的 NATS 消费者扫描原型）、
+  `Galosys.Foundation.Nats.Net`（Core NATS 消费者框架：`[NatsConsumer]` 特性标记位于 `NATS.Net`
+  命名空间（与上游 `NatsClient` 共享，对齐 `AmqpHandlerAttribute`/`RabbitMQ.Client` 约定）、
+  内部核心类型在 `Galosys.Foundation.Nats.Net`、Options 在 `Microsoft.Extensions.Options`、
+  DI 扩展在 `Microsoft.Extensions.DependencyInjection`；`AddNats(configuration)` 绑定 `Nats` 配置节，
+  `UseModularization()` 通过 `InternalModule` 自动接线）、
   `Galosys.Foundation.DurableTask.Core`（Durable Task 编排/活动封装，核心类型用
   `Galosys.Foundation.DurableTask.Core`，DI 扩展用 `Microsoft.Extensions.DependencyInjection`，
   宿主适配器用 `Microsoft.Extensions.Hosting`）。

@@ -1,113 +1,141 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using Galosys.Foundation.Core;
+using Galosys.Foundation.Nats.Net;
 using Microsoft.Extensions.DependencyModel;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Messaging;
 using Microsoft.Extensions.Options;
 using NATS.Client.Core;
 using NATS.Net;
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>
-    /// 服务提供者扩展，负责自动注册消息处理器 galoS@2026-04-15 10:00:00
+    /// 服务提供者扩展，负责扫描并注册 NATS 消费者。
     /// </summary>
     internal static class ServiceProviderExtensions
     {
-        private static readonly ConcurrentDictionary<MethodInfo, DateTime> _handlersRegistered = new();
+        private static readonly ConcurrentDictionary<(MethodInfo Method, string Subject, string? QueueGroup), DateTime>
+            _handlersRegistered = new();
 
         /// <summary>
-        /// 自动扫描并注册所有消息处理器
+        /// 扫描并注册所有被 <see cref="NatsConsumerAttribute"/> 标记的处理器，返回待建立的订阅描述。
         /// </summary>
-        /// <param name="root">根服务提供者</param>
-        public static async Task RegisterAllHandlersAsync(this IServiceProvider root)
+        /// <param name="root">根服务提供者。</param>
+        /// <param name="handlerTypes">限定扫描的类型；为空表示扫描全部。</param>
+        /// <returns>待建立的订阅描述集合。</returns>
+        internal static IReadOnlyList<NatsSubscription> RegisterHandlers(
+            this IServiceProvider root,
+            params Type[] handlerTypes)
         {
-            await root.RegisterHandlerAsync();
-        }
-
-        /// <summary>
-        /// 注册指定类型的消息处理器
-        /// </summary>
-        /// <param name="root">根服务提供者</param>
-        public static async Task RegisterHandlerAsync<T>(this IServiceProvider root)
-        {
-            await root.RegisterHandlerAsync(typeof(T));
-        }
-
-        /// <summary>
-        /// 注册指定类型或自动扫描的消息处理器
-        /// </summary>
-        /// <param name="root">根服务提供者</param>
-        /// <param name="handlerTypes">指定处理器类型</param>
-        public static async Task RegisterHandlerAsync(this IServiceProvider root, params Type[] handlerTypes)
-        {
-            var classTypes = DependencyContext.Default.GetImplementTypes();
-
-            if (handlerTypes != null && handlerTypes.Any())
-                classTypes = classTypes.Where(type => handlerTypes.Contains(type));
-
-            if (!classTypes.Any())
-                return;
-
-            var mis = classTypes.SelectMany(i => i.GetMethods())
-                .Where(m => m.GetCustomAttributes<NatsConsumerAttribute>(false).Any());
-
-            mis = mis.Where(i => !_handlersRegistered.ContainsKey(i));
-
-            if (!mis.Any())
-                return;
-
-            using (var scope = root.CreateScope())
+            var context = DependencyContext.Default;
+            if (context is null)
             {
-                var sp = scope.ServiceProvider;
-                var template = sp.GetRequiredService<INatsConnection>();
-                var options = sp.GetRequiredService<IOptionsMonitor<NatsOptions>>().CurrentValue;
+                root.GetService<ILogger<INatsConnection>>()
+                    ?.LogWarning("DependencyContext 不可用，跳过 NATS 消费者扫描。");
+                return Array.Empty<NatsSubscription>();
+            }
 
-                foreach (var mi in mis)
+            var candidates = context.GetImplementTypes();
+            if (handlerTypes is { Length: > 0 })
+                candidates = candidates.Where(t => handlerTypes.Contains(t));
+
+            var marked = candidates
+                .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                    .Select(m => (Method: m, Attributes: m.GetCustomAttributes<NatsConsumerAttribute>(false).ToArray())))
+                .Where(x => x.Attributes.Length > 0)
+                .ToArray();
+
+            if (marked.Length == 0)
+                return Array.Empty<NatsSubscription>();
+
+            var options = root.GetRequiredService<IOptionsMonitor<NatsOptions>>().CurrentValue;
+            var logger = root.GetService<ILogger<NatsBootstrapper>>()
+                ?? (ILogger?)root.GetService<ILogger<INatsConnection>>();
+
+            var subscriptions = new List<NatsSubscription>();
+
+            foreach (var (method, attributes) in marked)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length == 0)
                 {
-                    if (_handlersRegistered.TryGetValue(mi, out _))
+                    logger?.LogWarning(
+                        "NATS 消费者方法 {Method} 没有形参，跳过。", method.DeclaringType?.FullName);
+                    continue;
+                }
+
+                var messageType = parameters[0].ParameterType;
+
+                foreach (var attribute in attributes)
+                {
+                    if (string.IsNullOrWhiteSpace(attribute.Subject))
+                    {
+                        logger?.LogWarning(
+                            "NATS 消费者方法 {Method} 的 subject 为空，跳过。", method.DeclaringType?.FullName);
+                        continue;
+                    }
+
+                    var key = (method, attribute.Subject, attribute.QueueGroup);
+                    if (_handlersRegistered.ContainsKey(key))
                         continue;
 
-                    var handlers = mi.GetCustomAttributes<NatsConsumerAttribute>(false);
+                    if (!IsMessageType(messageType, method, logger))
+                        continue;
 
-                    foreach (var handler in handlers)
-                    {
-                        var paras = mi.GetParameters();
-                        var first = paras[0];
-                        var firstType = first.ParameterType;
+                    var property = ResolveHandlerProperty(options, attribute.Subject);
 
-                        try
-                        {
-                            ConcurrentRunner.CreateTaskRunner(1).Start(async ct =>
-                            {
-                                await foreach (var msg in template.SubscribeAsync<string>("sample.greet", queueGroup: "nats-sample-console-app"))
-                                {
-                                    using (var innerScope = root.CreateScope())
-                                    {
-                                        var innerSp = innerScope.ServiceProvider;
-                                        var instance = innerSp.GetRequiredService(mi.DeclaringType) as IMessageHandler;
-                                        //var rt = await instance.HandleAsync(msg.Data);
-                                        //return rt;
-                                        await Task.CompletedTask;
-                                    }
-                                }
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            var logger = root.GetService<ILogger<INatsConnection>>();
-                            //logger?.LogError(ex, "注册 AMQP Handler 失败: routingKey={RoutingKey}", handler.RoutingKey);
-                            throw;
-                        }
+                    subscriptions.Add(new NatsSubscription(
+                        attribute.Subject,
+                        attribute.QueueGroup,
+                        method,
+                        messageType,
+                        property.Concurrency,
+                        property.MaxRetryCount,
+                        property.RetryBaseDelayMs));
 
-                        _handlersRegistered.TryAdd(mi, DateTime.UtcNow);
-                    }
+                    _handlersRegistered.TryAdd(key, DateTime.UtcNow);
                 }
             }
+
+            return subscriptions;
+        }
+
+        private static bool IsMessageType(Type messageType, MethodInfo method, ILogger? logger)
+        {
+            if (typeof(IMessage).IsAssignableFrom(messageType))
+                return true;
+
+            logger?.LogWarning(
+                "NATS 消费者方法 {Method} 的形参类型 {MessageType} 未实现 IMessage，跳过。",
+                method.DeclaringType?.FullName,
+                messageType.FullName);
+
+            return false;
+        }
+
+        private static (int Concurrency, int MaxRetryCount, int RetryBaseDelayMs) ResolveHandlerProperty(
+            NatsOptions options,
+            string subject)
+        {
+            var concurrency = options.Concurrency;
+            var maxRetry = options.MaxRetryCount;
+            var retryDelay = options.RetryBaseDelayMs;
+
+            if (options.Handlers.TryGetValue(subject, out var property) && property is not null)
+            {
+                concurrency = property.Concurrency ?? concurrency;
+                maxRetry = property.MaxRetryCount ?? maxRetry;
+                retryDelay = property.RetryBaseDelayMs ?? retryDelay;
+            }
+
+            return (Math.Max(concurrency, 1), Math.Max(maxRetry, 0), Math.Max(retryDelay, 0));
         }
     }
 }
