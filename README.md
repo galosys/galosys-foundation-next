@@ -26,7 +26,7 @@
 | `Galosys.Foundation.Channel` | `src/Galosys.Foundation.Channel/` | 本地类库 | 逻辑通道传输框架：socket 传输 + 分帧编解码 + 客户端/服务端；见 [README](src/Galosys.Foundation.Channel/README.md)。 |
 | `Galosys.Foundation.Doris` | `src/Galosys.Foundation.Doris/` | 本地类库 | Doris `_stream_load` 的 HTTP 客户端，默认 FE HTTP 端口 `8030`。 |
 | `Galosys.Foundation.DurableTask.Core` | `src/Galosys.Foundation.DurableTask.Core/` | 本地类库 | Durable Task 编排/活动封装：DI 注册 + 宿主生命周期适配 + TaskHubClient 扩展。[README](src/Galosys.Foundation.DurableTask.Core/README.md) |
-| `Galosys.Foundation.Nats.Net` | `src/Galosys.Foundation.Nats.Net/` | 本地类库 | NATS 消费者扫描原型，当前不可编译。 |
+| `Galosys.Foundation.Nats.Net` | `src/Galosys.Foundation.Nats.Net/` | 本地类库 | Core NATS 消费者框架：特性驱动的扫描、订阅、反序列化与派发；见 [README](src/Galosys.Foundation.Nats.Net/README.md)。 |
 | `tests/Galosys.Foundation.Channel.Tests` | `tests/Galosys.Foundation.Channel.Tests/` | 测试（xUnit） | 覆盖 Channel 的单元测试。 |
 
 ## 构建、测试与运行
@@ -52,9 +52,7 @@ dotnet run --project samples/<Project>/<Project>.csproj
 
 多数示例是长期运行的 `BackgroundService`，需要 `Ctrl+C` 才能退出。
 
-> **已知限制**：`dotnet build Galosys.Foundation.Next.slnx` 会失败。解决方案包含
-> `Galosys.Foundation.Nats.Net`，该项目是代码不完整的原型、当前无法编译，而 `NatsSample.ConsoleApp`
-> 又引用了它。请改用上面的单项目构建。
+> **已知限制**：`dotnet build Galosys.Foundation.Next.slnx` 仍会失败。请改用上面的单项目构建。
 
 ## 基础设施
 
@@ -84,7 +82,6 @@ API 监听 `http://localhost:5134`，Swagger 位于 `/swagger`。`MafSample.Adap
 
 ## 已知限制
 
-- `Galosys.Foundation.Nats.Net` 当前不可编译，导致整个解决方案无法构建。
 - `DataIngestionSample.ConsoleApp` 的读取/分块管线尚未接线，只是试验代码。
 - `ChannelClientBase`、`WindowedBatchWorker.ProcessBatchAsync` 等仍是未实现的占位（抛
   `NotImplementedException`）。
@@ -100,6 +97,7 @@ API 监听 `http://localhost:5134`，Swagger 位于 `/swagger`。`MafSample.Adap
 
 - [Galosys.Foundation.Channel](src/Galosys.Foundation.Channel/README.md)
 - [Galosys.Foundation.DurableTask.Core](src/Galosys.Foundation.DurableTask.Core/README.md)
+- [Galosys.Foundation.Nats.Net](src/Galosys.Foundation.Nats.Net/README.md)
 - [NetServer.ConsoleApp](samples/NetServer.ConsoleApp/README.md)
 - [DTFx.ConsoleApp](samples/DTFx.ConsoleApp/README.md)
 - [OpenSpec 规格](openspec/specs/)

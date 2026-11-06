@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Messaging;
+using NATS.Net;
 
 namespace NatsSample.ConsoleApp.Adapter.Handlers
 {
@@ -6,15 +7,23 @@ namespace NatsSample.ConsoleApp.Adapter.Handlers
     internal class SampleGreatHandler
         : IMessageHandler<SampleGreatEvent>
     {
-        //[NatsConsumer("sample.greate",queueGroup: "nats-sample-console-app")]
+        private readonly ILogger<SampleGreatHandler> _logger;
+
+        public SampleGreatHandler(ILogger<SampleGreatHandler> logger)
+        {
+            _logger = logger;
+        }
+
+        [NatsConsumer("sample.greet", queueGroup: "nats-sample-console-app")]
         public Task<bool> HandleAsync(SampleGreatEvent msg)
         {
-            throw new NotImplementedException();
+            _logger.LogInformation("收到 NATS 消息: {@msg}", msg);
+            return Task.FromResult(true);
         }
     }
 
     internal class SampleGreatEvent : MessageBase
     {
-
+        public string? Text { get; set; }
     }
 }
