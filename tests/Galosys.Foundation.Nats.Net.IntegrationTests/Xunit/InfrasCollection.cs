@@ -1,4 +1,4 @@
-﻿namespace Galosys.Foundation.Nats.Net.IntegrationTests.Xunit
+﻿namespace Xunit
 {
     [CollectionDefinition(nameof(InfrasCollection))]
     public class InfrasCollection
