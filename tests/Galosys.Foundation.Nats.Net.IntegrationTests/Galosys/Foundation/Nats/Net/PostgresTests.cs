@@ -1,4 +1,6 @@
-﻿namespace Galosys.Foundation.Nats.Net.IntegrationTests
+﻿using Galosys.Foundation.Nats.Net.IntegrationTests.Xunit;
+
+namespace Galosys.Foundation.Nats.Net
 {
     [Collection(nameof(InfrasCollection))]
     public class PostgresTests

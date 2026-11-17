@@ -1,6 +1,6 @@
 ﻿using Testcontainers.PostgreSql;
 
-namespace Galosys.Foundation.Nats.Net.IntegrationTests
+namespace Galosys.Foundation.Nats.Net.IntegrationTests.Xunit
 {
     public class PostgresFixture
         : IAsyncLifetime
