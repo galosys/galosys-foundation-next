@@ -20,8 +20,4 @@ namespace Galosys.Foundation.Nats.Net.IntegrationTests
             await _pg.StartAsync();
         }
     }
-
-    [CollectionDefinition(nameof(PostgresFixture))]
-    public class PostgresCollection : ICollectionFixture<PostgresFixture>
-    { }
 }

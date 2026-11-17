@@ -1,6 +1,6 @@
 ﻿namespace Galosys.Foundation.Nats.Net.IntegrationTests
 {
-    [Collection(nameof(PostgresFixture))]
+    [Collection(nameof(InfrasCollection))]
     public class PostgresTests
     {
         private readonly PostgresFixture _fixture;
